@@ -113,18 +113,48 @@ function Magnetic({ children, className = "" }: { children: ReactNode; className
   );
 }
 
+function FadeSection({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.05 }}
+      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export default function App() {
   return (
     <div className="bg-canvas text-ink min-h-screen overflow-x-clip">
       <Nav />
-      <Hero />
-      <LogoCarousel />
-      <Problem />
-      <Method />
-      <About />
-      <Testimonials />
-      <CtaStrip />
-      <Footer />
+      <FadeSection>
+        <Hero />
+      </FadeSection>
+      <FadeSection>
+        <LogoCarousel />
+      </FadeSection>
+      <FadeSection>
+        <Problem />
+      </FadeSection>
+      <FadeSection>
+        <Method />
+      </FadeSection>
+      <FadeSection>
+        <About />
+      </FadeSection>
+      <FadeSection>
+        <Testimonials />
+      </FadeSection>
+      <FadeSection>
+        <CtaStrip />
+      </FadeSection>
+      <FadeSection>
+        <Footer />
+      </FadeSection>
     </div>
   );
 }
