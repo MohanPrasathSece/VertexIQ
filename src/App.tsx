@@ -173,7 +173,7 @@ function Nav() {
                 </motion.a>
               </Magnetic>
               <button
-                className="lg:hidden p-2 rounded-full border border-hair"
+                className="lg:hidden p-2 rounded-full border border-hair bg-white shadow-soft"
                 onClick={() => setMenuOpen(true)}
               >
                 <Menu className="size-5" />

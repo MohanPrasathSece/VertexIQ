@@ -166,6 +166,7 @@
     letter-spacing: -0.02em;
   }
   .text-ink { color: #111111; }
+  .bg-ink { background-color: #111111; }
   .text-muted2 { color: #6F6F6F; }
   .bg-canvas { background-color: transparent; }
   .border-hair { border-color: #ECECEC; }
