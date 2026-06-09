@@ -15,6 +15,16 @@ import {
   Sparkles,
   Check,
   Star,
+  Bitcoin,
+  Activity,
+  LineChart,
+  Coins,
+  CircleDollarSign,
+  Terminal,
+  Send,
+  Shield,
+  Database,
+  RefreshCw,
 } from "lucide-react";
 import {
   motion,
@@ -178,6 +188,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home onSignUp={() => setAuthMode('signup')} onLogin={() => setAuthMode('login')} />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
       <Footer />
       <AnimatePresence>
@@ -321,6 +332,17 @@ function Hero({ onSignUp, onLogin }: { onSignUp: () => void; onLogin?: () => voi
       <div className="pointer-events-none absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-grad-lavender blur-2xl opacity-50" />
       <div className="pointer-events-none absolute top-40 -left-32 w-[480px] h-[480px] rounded-full bg-grad-pink blur-2xl opacity-40" />
       <div className="pointer-events-none absolute inset-0 dotted-bg opacity-30" />
+
+      {/* Floating Crypto Icons in Background */}
+      <motion.div animate={{ y: [0, -20, 0], rotate: [0, 10, -10, 0] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute top-20 left-[10%] text-[#F7931A]/20 pointer-events-none">
+        <Bitcoin className="w-16 h-16" />
+      </motion.div>
+      <motion.div animate={{ y: [0, 30, 0], rotate: [0, -15, 15, 0] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-40 right-[15%] text-[#F3BA2F]/20 pointer-events-none">
+        <Coins className="w-24 h-24" />
+      </motion.div>
+      <motion.div animate={{ y: [0, -15, 0], scale: [1, 1.1, 1] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute top-1/3 right-[5%] text-[#627EEA]/20 pointer-events-none">
+        <LineChart className="w-20 h-20" />
+      </motion.div>
 
       <div className="relative mx-auto max-w-7xl px-6 lg:px-10 pt-28 lg:pt-32 pb-24 lg:pb-32 grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
         {/* LEFT */}
@@ -1213,6 +1235,7 @@ function SectionLabel({ children, center = false }: { children: React.ReactNode;
 /* ---------------- AUTH MODAL ---------------- */
 function AuthModal({ mode, onClose }: { mode: 'login' | 'signup', onClose: () => void }) {
   const [submitted, setSubmitted] = useState(false);
+  const navigate = useNavigate();
 
   const handleSignupSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1222,7 +1245,8 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'signup', onClose: () =>
     setSubmitted(true);
     setTimeout(() => {
       onClose();
-    }, 3000);
+      navigate('/dashboard');
+    }, 2000);
   };
 
   const handleLoginSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -1230,7 +1254,8 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'signup', onClose: () =>
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
     console.log("Login captured email:", data.email);
-    window.location.href = "https://p.finance/en/cabinet/try-demo?a=x1uRlBpzKnqFMN&ac=smart-link&code=WELCOME50&click_id=pqmcmj.3.2q4e";
+    onClose();
+    navigate('/dashboard');
   };
 
   return (
@@ -1244,8 +1269,16 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'signup', onClose: () =>
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-md bg-white rounded-3xl shadow-float p-6 sm:p-8"
+        className="relative w-full max-w-md bg-white rounded-3xl shadow-float p-6 sm:p-8 overflow-hidden"
       >
+        {/* Decorative Crypto/Finance elements */}
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="absolute -top-10 -right-10 text-[#F3BA2F]/10 pointer-events-none">
+          <CircleDollarSign className="w-40 h-40" />
+        </motion.div>
+        <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-5 -left-5 text-[#F7931A]/10 pointer-events-none">
+          <Bitcoin className="w-20 h-20" />
+        </motion.div>
+
         <button
           onClick={onClose}
           className="absolute top-6 right-6 p-2 rounded-full bg-[#FAFAFA] hover:bg-[#F0F0F0] transition-colors"
@@ -1446,3 +1479,172 @@ function ContactPage() {
     </div>
   );
 }
+
+/* ---------------- DASHBOARD (NEW) ---------------- */
+function Dashboard() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  return (
+    <div className="pt-28 lg:pt-36 pb-24 lg:pb-32 px-6 lg:px-10 max-w-7xl mx-auto min-h-screen relative">
+      {/* Background elements */}
+      <div className="pointer-events-none absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-grad-lavender blur-3xl opacity-30" />
+      <div className="pointer-events-none absolute bottom-0 left-0 w-[600px] h-[600px] rounded-full bg-grad-peach blur-3xl opacity-20" />
+
+      <FadeSection>
+        <div className="mb-12 flex items-center justify-between">
+          <div>
+            <h1 className="font-display font-bold text-[36px] sm:text-[48px] text-ink">
+              Tableau de bord
+              </h1>
+              <p className="mt-2 text-[16px] text-muted2">Bienvenue dans l'espace membre VertexIQ.</p>
+            </div>
+            <button 
+              onClick={() => navigate('/')}
+              className="rounded-full bg-white border border-hair px-4 py-2 text-[14px] font-medium text-ink hover:bg-[#FAFAFA] transition-colors shadow-sm cursor-pointer relative z-10"
+            >
+              Déconnexion
+            </button>
+          </div>
+        </FadeSection>
+
+        <div className="grid lg:grid-cols-3 gap-8 h-full">
+          {/* Left Column: Company Info & Contact Form */}
+          <div className="lg:col-span-1 flex flex-col gap-6">
+            {/* Company Info */}
+            <FadeSection>
+              <div className="rounded-[24px] bg-white border border-hair shadow-soft p-6 sm:p-8 relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 text-[#A78BFA]/10 rotate-12">
+                  <Shield className="w-32 h-32" />
+                </div>
+                <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted2 mb-4">
+                  <span className="size-1.5 rounded-full bg-[#A78BFA]" />
+                  À propos de VertexIQ
+                </div>
+                <h3 className="font-display font-bold text-[22px] mb-3 relative z-10">
+                  La référence en intelligence de marché
+                </h3>
+                <p className="text-[14px] leading-relaxed text-muted2 relative z-10">
+                  VertexIQ utilise des algorithmes prédictifs avancés et des modèles d'IA pour analyser les marchés crypto et traditionnels en temps réel. Notre mission est de vous fournir des signaux précis et un avantage stratégique.
+                </p>
+                <div className="mt-5 flex gap-2 relative z-10">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F3BA2F]/10 text-[#D49C1E] px-3 py-1 text-[12px] font-semibold">
+                    <Bitcoin className="w-3 h-3" /> Crypto
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#627EEA]/10 text-[#475EBE] px-3 py-1 text-[12px] font-semibold">
+                    <LineChart className="w-3 h-3" /> Actions
+                  </span>
+                </div>
+              </div>
+            </FadeSection>
+
+            {/* Account Stats */}
+            <FadeSection>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-[24px] bg-white border border-hair shadow-soft p-5">
+                  <div className="text-[11px] text-muted2 uppercase tracking-wider mb-2 font-semibold">Solde Démo</div>
+                  <div className="font-display font-bold text-[22px] text-ink">50 000,00 $</div>
+                  <div className="text-[11px] text-[#0E7C4A] mt-2 bg-[#0E7C4A]/10 inline-block px-2 py-0.5 rounded-full font-medium">+2.4% aujourd'hui</div>
+                </div>
+                <div className="rounded-[24px] bg-white border border-hair shadow-soft p-5">
+                  <div className="text-[11px] text-muted2 uppercase tracking-wider mb-2 font-semibold">Trades Actifs</div>
+                  <div className="font-display font-bold text-[22px] text-ink">3 Ordres</div>
+                  <div className="text-[11px] text-[#3B82F6] mt-2 bg-[#3B82F6]/10 inline-block px-2 py-0.5 rounded-full font-medium">Bot Vertex v2.4</div>
+                </div>
+              </div>
+            </FadeSection>
+
+            {/* Excel Sheet Contact Form */}
+            <FadeSection>
+              <div className="rounded-[24px] bg-white border border-hair shadow-soft p-0 overflow-hidden flex-1">
+                <div className="bg-[#107C41] p-4 text-white flex items-center gap-3">
+                  <Database className="w-5 h-5" />
+                  <div>
+                    <h3 className="font-display font-semibold text-[16px]">Base de données de contact</h3>
+                    <div className="text-[11px] text-white/70">Mode Feuille de calcul</div>
+                  </div>
+                </div>
+                <div className="p-1 bg-[#F3F2F1] h-full">
+                  {/* Simulated Excel Grid */}
+                  <form className="bg-white border border-[#E1DFDD] grid grid-cols-[40px_1fr] text-[13px] h-full" onSubmit={(e) => { e.preventDefault(); alert('Ligne enregistrée!'); }}>
+                    {/* Headers */}
+                    <div className="bg-[#F3F2F1] border-b border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[11px]"></div>
+                    <div className="bg-[#F3F2F1] border-b border-[#E1DFDD] flex items-center px-3 py-1.5 text-[#605E5C] font-semibold uppercase text-[11px] tracking-wider">
+                      Saisie des Données (A1)
+                    </div>
+                    
+                    {/* Row 1 */}
+                    <div className="bg-[#F3F2F1] border-b border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[11px]">1</div>
+                    <div className="border-b border-[#E1DFDD] p-0 relative">
+                      <input type="text" placeholder="Nom Complet" required className="w-full h-full px-3 py-2 outline-none focus:bg-[#E5F3FF] focus:border-2 focus:border-[#107C41] relative z-10 bg-transparent" />
+                    </div>
+
+                    {/* Row 2 */}
+                    <div className="bg-[#F3F2F1] border-b border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[11px]">2</div>
+                    <div className="border-b border-[#E1DFDD] p-0 relative h-9">
+                      <input type="email" placeholder="Adresse Email" required className="w-full h-full px-3 py-2 outline-none focus:bg-[#E5F3FF] focus:border-2 focus:border-[#107C41] relative z-10 bg-transparent" />
+                    </div>
+
+                    {/* Row 3 */}
+                    <div className="bg-[#F3F2F1] border-b border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[11px]">3</div>
+                    <div className="border-b border-[#E1DFDD] p-0 relative h-9">
+                      <input type="tel" placeholder="Téléphone" className="w-full h-full px-3 py-2 outline-none focus:bg-[#E5F3FF] focus:border-2 focus:border-[#107C41] relative z-10 bg-transparent" />
+                    </div>
+
+                    {/* Row 4 */}
+                    <div className="bg-[#F3F2F1] border-b border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[11px] align-top pt-2">4</div>
+                    <div className="border-b border-[#E1DFDD] p-0 relative h-20">
+                      <textarea placeholder="Votre message..." required className="w-full h-full px-3 py-2 outline-none focus:bg-[#E5F3FF] focus:border-2 focus:border-[#107C41] relative z-10 bg-transparent resize-none" />
+                    </div>
+
+                    {/* Action Row */}
+                    <div className="bg-[#F3F2F1] border-r border-[#E1DFDD]"></div>
+                    <div className="p-2 bg-[#F3F2F1]">
+                      <button type="submit" className="w-full flex items-center justify-center gap-2 bg-[#107C41] text-white py-1.5 rounded hover:bg-[#0C5E31] transition-colors font-medium">
+                        <Send className="w-3.5 h-3.5" /> Enregistrer la ligne
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </FadeSection>
+          </div>
+
+          {/* Right Column: Demo Trading Bot iframe */}
+          <div className="lg:col-span-2 flex flex-col min-h-[600px]">
+            <FadeSection className="h-full flex-1">
+              <div className="rounded-[24px] bg-[#0A0E17] text-white shadow-float border border-white/10 overflow-hidden flex flex-col h-full w-full relative">
+                <div className="border-b border-white/10 p-4 flex items-center justify-between bg-[#111827] z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="size-8 rounded-full bg-[#F3BA2F]/20 flex items-center justify-center border border-[#F3BA2F]/30">
+                      <Terminal className="size-4 text-[#F3BA2F]" />
+                    </div>
+                    <div>
+                      <h3 className="font-display font-bold text-[16px] leading-none">Terminal de Trading Demo</h3>
+                      <div className="text-[11px] text-[#22C55E] flex items-center gap-1 mt-1">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22C55E] opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#22C55E]"></span>
+                        </span>
+                        Connecté à la plateforme
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 w-full bg-white relative">
+                  <iframe 
+                    src="https://p.finance/en/cabinet/try-demo?a=x1uRlBpzKnqFMN&ac=smart-link&code=WELCOME50&click_id=pqmcmj.3.2q4e" 
+                    className="absolute inset-0 w-full h-full border-0"
+                    title="Demo Trading Platform"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            </FadeSection>
+          </div>
+        </div>
+      </div>
+    );
+  }
