@@ -23,7 +23,8 @@ import {
   useMotionValue,
   type Variants,
 } from "motion/react";
-import { useRef, useState, type ReactNode, type MouseEvent } from "react";
+import { useRef, useState, useEffect, type ReactNode, type MouseEvent } from "react";
+import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 
 /* ---------------- MOTION HELPERS ---------------- */
 const fadeUp: Variants = {
@@ -116,10 +117,10 @@ function Magnetic({ children, className = "" }: { children: ReactNode; className
 function FadeSection({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 40 }}
+      initial={{ opacity: 0, y: 60 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.05 }}
-      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      viewport={{ once: true, amount: 0.1 }}
+      transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
       className={className}
     >
       {children}
@@ -127,12 +128,24 @@ function FadeSection({ children, className = "" }: { children: ReactNode; classN
   );
 }
 
-export default function App() {
+function Home({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void }) {
+  const location = useLocation();
+  
+  useEffect(() => {
+    if (location.hash) {
+      const element = document.getElementById(location.hash.slice(1));
+      if (element) {
+        setTimeout(() => element.scrollIntoView({ behavior: 'smooth' }), 100);
+      }
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [location]);
+
   return (
-    <div className="bg-canvas text-ink min-h-screen overflow-x-clip">
-      <Nav />
+    <>
       <FadeSection>
-        <Hero />
+        <Hero onSignUp={onSignUp} onLogin={onLogin} />
       </FadeSection>
       <FadeSection>
         <LogoCarousel />
@@ -150,19 +163,43 @@ export default function App() {
         <Testimonials />
       </FadeSection>
       <FadeSection>
-        <CtaStrip />
+        <CtaStrip onSignUp={onSignUp} />
       </FadeSection>
-      <FadeSection>
-        <Footer />
-      </FadeSection>
+    </>
+  );
+}
+
+export default function App() {
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | null>(null);
+
+  return (
+    <div className="bg-canvas text-ink min-h-screen overflow-x-clip">
+      <Nav onSignUp={() => setAuthMode('signup')} onLogin={() => setAuthMode('login')} />
+      <Routes>
+        <Route path="/" element={<Home onSignUp={() => setAuthMode('signup')} onLogin={() => setAuthMode('login')} />} />
+        <Route path="/contact" element={<ContactPage />} />
+      </Routes>
+      <Footer />
+      <AnimatePresence>
+        {authMode && (
+          <AuthModal mode={authMode} onClose={() => setAuthMode(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 /* ---------------- NAV ---------------- */
-function Nav() {
+function Nav({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const links = ["Home", "About", "The Method", "Case Studies", "Blog", "Contact"];
+  const links = [
+    { name: "Accueil", href: "/#home" },
+    { name: "À propos", href: "/#about" },
+    { name: "Technologie", href: "/#technology" },
+    { name: "Succès", href: "/#success-stories" },
+    { name: "Insights", href: "/#insights" },
+    { name: "Contact", href: "/contact" }
+  ];
   return (
     <>
       <div className="fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-7xl z-50">
@@ -174,33 +211,36 @@ function Nav() {
         >
           <div className="px-6 h-[64px] flex items-center justify-between">
             <a href="#" className="font-display font-bold tracking-tight text-[18px]">
-              VETERUS<span className="text-[#A78BFA]">.</span>
+              VERTEXIQ<span className="text-[#A78BFA]">.</span>
             </a>
             <nav className="hidden lg:flex items-center gap-9 text-[14px] text-muted2">
               {links.map((l) => (
-                <a
-                  key={l}
-                  href="#"
+                <Link
+                  key={l.name}
+                  to={l.href}
                   className="relative group hover:text-ink transition-colors"
                 >
-                  {l}
+                  {l.name}
                   <span className="absolute left-0 -bottom-1 h-px w-full origin-right scale-x-0 bg-ink transition-transform duration-300 group-hover:origin-left group-hover:scale-x-100" />
-                </a>
+                </Link>
               ))}
             </nav>
             <div className="flex items-center gap-3">
+              <button onClick={onLogin} className="hidden sm:block text-[14px] font-medium text-ink hover:text-[#A78BFA] transition-colors px-2">
+                Connexion
+              </button>
               <Magnetic className="hidden sm:block">
-                <motion.a
-                  href="#cta"
+                <motion.button
+                  onClick={onSignUp}
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.96 }}
                   className="group relative inline-flex items-center gap-2 rounded-full text-white px-5 py-2 text-[13px] font-medium overflow-hidden"
                   style={{ backgroundColor: "#111111" }}
                 >
-                  <span className="relative z-10">Book Strategy Call</span>
+                  <span className="relative z-10">S'inscrire</span>
                   <ArrowRight className="relative z-10 size-3.5 transition-transform group-hover:translate-x-0.5" />
                   <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                </motion.a>
+                </motion.button>
               </Magnetic>
               <button
                 className="lg:hidden p-2 rounded-full border border-hair bg-white shadow-soft"
@@ -225,7 +265,7 @@ function Nav() {
           >
             <div className="flex items-center justify-between px-6 h-[72px] border-b border-white/10">
               <a href="#" className="font-display font-bold tracking-tight text-[18px]">
-                VETERUS<span className="text-[#A78BFA]">.</span>
+                VERTEXIQ<span className="text-[#A78BFA]">.</span>
               </a>
               <button
                 onClick={() => setMenuOpen(false)}
@@ -234,31 +274,37 @@ function Nav() {
                 <X className="size-5" />
               </button>
             </div>
-            <nav className="flex-1 flex flex-col justify-center px-8 gap-6">
+            <nav className="flex-1 flex flex-col justify-center px-8 gap-5">
               {links.map((l, i) => (
-                <motion.a
-                  key={l}
-                  href="#"
+                <motion.div
+                  key={l.name}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.05 + i * 0.05, duration: 0.4 }}
                   onClick={() => setMenuOpen(false)}
-                  className="font-display font-bold text-[32px] hover:text-[#A78BFA] transition-colors"
+                  className="font-display font-bold text-[24px] hover:text-[#A78BFA] transition-colors"
                 >
-                  {l}
-                </motion.a>
+                  <Link to={l.href} className="block w-full">{l.name === "Succès" ? "Succès" : l.name}</Link>
+                </motion.div>
               ))}
             </nav>
             <div className="px-8 pb-10">
-              <a
-                href="#cta"
-                onClick={() => setMenuOpen(false)}
-                className="group relative inline-flex items-center gap-2 rounded-full bg-white text-ink px-7 py-4 text-[14px] font-semibold overflow-hidden w-full justify-center"
-              >
-                <span className="relative z-10">Book a Strategy Call</span>
-                <ArrowRight className="relative z-10 size-4" />
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-ink/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              </a>
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={() => { setMenuOpen(false); onLogin(); }}
+                  className="w-full text-center py-4 text-[16px] font-semibold text-white border border-white/20 rounded-full"
+                >
+                  Connexion
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); onSignUp(); }}
+                  className="group relative inline-flex items-center gap-2 rounded-full bg-white text-ink px-7 py-4 text-[14px] font-semibold overflow-hidden w-full justify-center"
+                >
+                  <span className="relative z-10">S'inscrire</span>
+                  <ArrowRight className="relative z-10 size-4" />
+                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-ink/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -268,9 +314,9 @@ function Nav() {
 }
 
 /* ---------------- HERO ---------------- */
-function Hero() {
+function Hero({ onSignUp, onLogin }: { onSignUp: () => void; onLogin?: () => void }) {
   return (
-    <section className="relative overflow-hidden">
+    <section id="home" className="relative overflow-hidden">
       {/* static gradient blobs — no JS scroll tracking, paint once */}
       <div className="pointer-events-none absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-grad-lavender blur-2xl opacity-50" />
       <div className="pointer-events-none absolute top-40 -left-32 w-[480px] h-[480px] rounded-full bg-grad-pink blur-2xl opacity-40" />
@@ -284,56 +330,54 @@ function Hero() {
             className="inline-flex items-center gap-2 text-[11px] tracking-[0.18em] uppercase text-muted2"
           >
             <span className="size-1.5 rounded-full bg-[#A78BFA]" />
-            Strategic Advisory for Engineering-Led Businesses
+            Trading Intelligent & Solutions de Marché Propulsées par l'IA
           </motion.div>
           <motion.h1
             variants={fadeUp}
             className="mt-6 font-display font-bold leading-[1.05] tracking-tight"
           >
-            <span className="block text-[40px] sm:text-[50px] lg:text-[60px] text-ink">
-              Build a Business
+            <span className="block text-[34px] sm:text-[48px] lg:text-[60px] text-ink">
+              Tradez mieux.
             </span>
-            <span className="block text-[40px] sm:text-[50px] lg:text-[60px] relative text-ink">
-              That{" "}
+            <span className="block text-[34px] sm:text-[48px] lg:text-[60px] relative text-ink">
+              Agissez{" "}
               <span className="relative">
-                <span className="relative z-10">Performs</span>
+                <span className="relative z-10">vite.</span>
                 <span
                   className="absolute left-0 bottom-0.5 w-full h-[5px] rounded-full opacity-60"
                   style={{ background: "linear-gradient(90deg, #A78BFA, #EC4899)" }}
                 />
               </span>
             </span>
-            <span className="block text-[40px] sm:text-[50px] lg:text-[60px] text-ink/40">
-              Without You
+            <span className="block text-[34px] sm:text-[48px] lg:text-[60px] text-ink/40">
+              Croissez sereinement.
             </span>
           </motion.h1>
           <motion.p
             variants={fadeUp}
             className="mt-7 text-[15px] leading-relaxed text-muted2 max-w-md"
           >
-            We help engineering founders remove operational dependency, build
-            self-managing teams, grow enterprise value so the business
-            thrives with or without you.
+            VertexIQ combine l'intelligence artificielle avancée, l'analyse en temps réel et l'intelligence de marché automatisée pour aider les traders à identifier les opportunités, réduire la complexité et prendre des décisions basées sur les données en toute confiance.
           </motion.p>
 
           <motion.div variants={fadeUp} className="mt-8">
             <Magnetic>
-              <motion.a
-                href="#cta"
+              <motion.button
+                onClick={onSignUp}
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 className="group relative inline-flex items-center gap-2 rounded-full px-7 py-4 text-[14px] font-semibold text-white overflow-hidden"
                 style={{ backgroundColor: "#111111" }}
               >
-                <span className="relative z-10">Book a Strategy Call</span>
+                <span className="relative z-10">Commencer</span>
                 <ArrowRight className="relative z-10 size-4 transition-transform group-hover:translate-x-1" />
                 <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              </motion.a>
+              </motion.button>
             </Magnetic>
           </motion.div>
 
           <motion.p variants={fadeUp} className="mt-6 text-[12px] text-muted2">
-            Trusted by founders in engineering, manufacturing, construction &amp; defence.
+            Approuvé par des traders, investisseurs et professionnels axés sur la technologie à travers le monde.
           </motion.p>
         </Stagger>
 
@@ -342,7 +386,7 @@ function Hero() {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
-          className="lg:col-span-6 relative h-[560px] lg:h-[640px]"
+          className="lg:col-span-6 relative h-[420px] sm:h-[560px] lg:h-[640px]"
           style={{ willChange: "transform" }}
         >
           <DashboardMockup />
@@ -355,14 +399,14 @@ function Hero() {
 /* ---------------- LOGO CAROUSEL ---------------- */
 function LogoCarousel() {
   const logos = [
-    { name: "McKinsey", svg: "M4 20V4h2.4l5.6 12L17.6 4H20v16h-2V8.2L12.6 18h-1.2L6 8.2V20H4z" },
-    { name: "Deloitte", svg: "M12 4a8 8 0 100 16 8 8 0 000-16zm0 2a6 6 0 110 12 6 6 0 010-12z" },
-    { name: "Accenture", svg: "M2 18L12 4l10 14H2zm4.5-2h11L12 7.5 6.5 16z" },
-    { name: "BCG", svg: "M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z" },
-    { name: "PwC", svg: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93z" },
-    { name: "EY", svg: "M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z" },
-    { name: "Bain", svg: "M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18l7 3.5v7.64l-7 3.5-7-3.5V7.68l7-3.5z" },
-    { name: "Goldman", svg: "M4 8h16v8H4V8zm2 2v4h12v-4H6z" },
+    { name: "United Kingdom", svg: "M4 20V4h2.4l5.6 12L17.6 4H20v16h-2V8.2L12.6 18h-1.2L6 8.2V20H4z" },
+    { name: "Canada", svg: "M12 4a8 8 0 100 16 8 8 0 000-16zm0 2a6 6 0 110 12 6 6 0 010-12z" },
+    { name: "Germany", svg: "M2 18L12 4l10 14H2zm4.5-2h11L12 7.5 6.5 16z" },
+    { name: "Australia", svg: "M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z" },
+    { name: "Singapore", svg: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93z" },
+    { name: "France", svg: "M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z" },
+    { name: "Netherlands", svg: "M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18l7 3.5v7.64l-7 3.5-7-3.5V7.68l7-3.5z" },
+    { name: "UAE", svg: "M4 8h16v8H4V8zm2 2v4h12v-4H6z" },
   ];
 
   const marqueeLogos = [...logos, ...logos, ...logos];
@@ -371,7 +415,7 @@ function LogoCarousel() {
     <section className="py-12 border-y border-hair overflow-hidden">
       <div className="mx-auto max-w-7xl px-6 lg:px-10 mb-6">
         <p className="text-[11px] tracking-[0.18em] uppercase text-muted2 text-center">
-          Trusted by leaders from
+          Approuvé par des utilisateurs à travers
         </p>
       </div>
       <div className="relative w-full overflow-hidden mask-gradient">
@@ -406,16 +450,15 @@ function DashboardMockup() {
       <div className="absolute inset-8 rounded-[40px] bg-grad-lavender blur-2xl opacity-80" />
 
       {/* main card */}
-      <div className="w-[90%] max-w-[460px] rounded-[28px] bg-white border border-hair shadow-float p-7 relative z-10">
+      <div className="w-[90%] max-w-[460px] rounded-[28px] bg-white border border-hair shadow-float p-5 sm:p-7 relative z-10">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-[11px] uppercase tracking-[0.18em] text-muted2">
-              Executive Overview
+              Aperçu Plateforme
             </div>
             <div className="mt-1 font-display font-bold text-[22px]">
               Performance
-            </div>
-          </div>
+            </div>          </div>
           <div className="size-10 rounded-full bg-grad-lavender flex items-center justify-center">
             <Sparkles className="size-4 text-[#6F4FD0]" />
           </div>
@@ -424,21 +467,21 @@ function DashboardMockup() {
         <div className="mt-5 rounded-2xl bg-[#FAFAFA] border border-hair p-4">
           <div className="flex items-end justify-between">
             <div>
-              <div className="text-[12px] text-muted2">Enterprise Value</div>
-              <div className="font-display font-bold text-[28px] leading-none mt-1">
-                £12.4M
+              <div className="text-[12px] text-muted2">Précision IA</div>
+              <div className="font-display font-bold text-[24px] sm:text-[28px] leading-none mt-1">
+                94.8%
               </div>
             </div>
             <div className="text-[12px] font-medium text-[#0E7C4A] flex items-center gap-1">
-              <TrendingUp className="size-3.5" /> +28.4%
+              <TrendingUp className="size-3.5" /> +18.2%
             </div>
           </div>
           <Sparkline />
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <MetricMini label="Leadership Score" value="84/100" trend="+6" />
-          <MetricMini label="Ops Independence" value="72%" trend="+11" />
+          <MetricMini label="Performance des Signaux" value="89/100" trend="+9" />
+          <MetricMini label="Efficacité Automation" value="96%" trend="+14" />
         </div>
       </div>
     </div>
@@ -487,49 +530,48 @@ function Problem() {
   const items = [
     {
       icon: Users,
-      title: "Founder Bottleneck",
-      body: "Your senior team still waits for your decisions before acting.",
+      title: "Surcharge d'information",
+      body: "Des milliers de signaux de marché rendent difficile l'identification d'opportunités significatives.",
     },
     {
       icon: Gauge,
-      title: "Pressure Instead of Freedom",
-      body: "Revenue grows, but so does operational dependency on you.",
+      title: "Décisions émotionnelles",
+      body: "La peur et l'incertitude conduisent souvent à des opportunités manquées ou à un mauvais timing.",
     },
     {
       icon: UserCheck,
-      title: "Failed Leadership Hires",
-      body: "You've hired senior people before, but nothing truly changed.",
+      title: "Analyse lente",
+      body: "Les méthodes de recherche traditionnelles ne peuvent pas toujours suivre le rythme des marchés en rapide évolution.",
     },
     {
       icon: TrendingUp,
-      title: "Low Enterprise Value",
-      body: "The business cannot scale independently from the founder.",
+      title: "Faible précision IA",
+      body: "Sans approche structurée, la performance devient souvent imprévisible.",
     },
   ];
   return (
-    <section className="relative py-28 lg:py-36">
+    <section id="insights" className="relative py-28 lg:py-36">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         <Reveal>
-          <SectionLabel>Common Challenges</SectionLabel>
+          <SectionLabel>Défis courants</SectionLabel>
         </Reveal>
         <div className="mt-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
           <Reveal as="h2" className="font-display font-bold text-[40px] sm:text-[52px] leading-[1.05] max-w-2xl">
-            Why Growth Still Feels Heavy
+            Pourquoi le trading semble compliqué
           </Reveal>
           <Reveal as="p" delay={0.1} className="text-muted2 max-w-md text-[16px]">
-            The patterns we see repeatedly inside engineering-led businesses that
-            have outgrown their founder's operational capacity.
+            Les défis que rencontrent de nombreux investisseurs lorsqu'ils naviguent sur les marchés financiers modernes.
           </Reveal>
         </div>
 
-        <Stagger className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <Stagger className="mt-10 sm:mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {items.map((it, i) => (
             <motion.div
               key={i}
               variants={fadeUp}
               whileHover={{ y: -6 }}
               transition={{ type: "spring", stiffness: 260, damping: 22 }}
-              className="group rounded-3xl bg-white border border-hair p-7 hover:shadow-soft hover:border-[#D8D8D8] transition-[box-shadow,border-color]"
+              className="group rounded-3xl bg-white border border-hair p-6 sm:p-7 hover:shadow-soft hover:border-[#D8D8D8] transition-[box-shadow,border-color]"
             >
               <motion.div
                 whileHover={{ rotate: -8, scale: 1.05 }}
@@ -545,7 +587,7 @@ function Problem() {
                 {it.body}
               </p>
               <div className="mt-8 flex items-center text-[13px] text-ink opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                Learn more <ArrowUpRight className="size-3.5 ml-1" />
+                En savoir plus <ArrowUpRight className="size-3.5 ml-1" />
               </div>
             </motion.div>
           ))}
@@ -559,36 +601,36 @@ function Problem() {
 function Method() {
   const cards = [
     {
-      title: "Strategic Clarity",
-      body: "Define a sharp, defensible direction the entire business can align behind.",
+      title: "Intelligence de marché",
+      body: "Transformez de grandes quantités de données de marché en insights clairs et exploitables.",
       icon: Compass,
       tint: "bg-grad-lavender",
       accent: "#A78BFA",
     },
     {
-      title: "Leadership Capability",
-      body: "Build a senior team that owns outcomes, not just tasks.",
+      title: "Analyse prédictive",
+      body: "Identifiez les tendances et opportunités avant qu'elles ne deviennent évidentes pour le marché général.",
       icon: Crown,
       tint: "bg-grad-pink",
       accent: "#E58FB2",
     },
     {
-      title: "Commercial Maturity",
-      body: "Move from owner-led selling to a repeatable commercial engine.",
+      title: "Surveillance automatisée",
+      body: "Suivez les marchés en continu et recevez des alertes intelligentes en temps réel.",
       icon: Briefcase,
       tint: "bg-grad-peach",
       accent: "#F0A878",
     },
     {
-      title: "Operational Leverage",
-      body: "Systems, rhythm, accountability that compound without your input.",
+      title: "Optimisation des risques",
+      body: "Équilibrez opportunité et protection grâce à une gestion des risques plus intelligente.",
       icon: Layers,
       tint: "bg-grad-mint",
       accent: "#7BB7A2",
     },
     {
-      title: "Enterprise Value & Optionality",
-      body: "Engineer the business so it's investable, sellable, or freely operable.",
+      title: "Précision IA & Options",
+      body: "Construisez une approche cohérente et basée sur les données conçue pour un succès à long terme.",
       icon: Sparkles,
       tint: "bg-grad-lavender",
       accent: "#8B6FE0",
@@ -596,23 +638,22 @@ function Method() {
   ];
 
   return (
-    <section className="relative py-28 lg:py-36 overflow-clip">
+    <section id="technology" className="relative py-28 lg:py-36 overflow-clip">
       <div className="pointer-events-none absolute top-1/3 right-0 w-[500px] h-[500px] rounded-full bg-grad-lavender blur-3xl opacity-50" />
 
       <div className="relative mx-auto max-w-7xl px-6 lg:px-10">
         <div className="text-center max-w-3xl mx-auto">
           <Reveal>
-            <SectionLabel center>The Method</SectionLabel>
+            <SectionLabel center>Le Cadre VertexIQ</SectionLabel>
           </Reveal>
           <Reveal as="h2" delay={0.05} className="mt-6 font-display font-bold text-[40px] sm:text-[56px] leading-[1.04]">
             <>
-              The Freedom Blueprint
+              Le Cadre VertexIQ
               <sup className="text-[20px] sm:text-[28px] align-super">™</sup>
             </>
           </Reveal>
           <Reveal as="p" delay={0.12} className="mt-5 text-muted2 text-[17px]">
-            A structured framework for transforming founder-led businesses into
-            scalable enterprises.
+            Un système moderne conçu pour simplifier la prise de décision et améliorer la conscience du marché.
           </Reveal>
         </div>
 
@@ -672,7 +713,7 @@ function StickyMethodCard({
           style={{ backgroundColor: card.accent }}
         />
 
-        <div className="relative grid lg:grid-cols-12 gap-8 p-7 sm:p-10 lg:p-14 items-center min-h-[420px] lg:min-h-[460px]">
+        <div className="relative grid lg:grid-cols-12 gap-6 sm:gap-8 p-6 sm:p-10 lg:p-14 items-center min-h-[380px] sm:min-h-[420px] lg:min-h-[460px]">
           <div className="lg:col-span-7">
             <div className="flex items-center justify-between max-w-md">
               <motion.div
@@ -689,7 +730,7 @@ function StickyMethodCard({
                 0{index} / 0{total}
               </div>
             </div>
-            <h3 className="mt-7 font-display font-bold text-[30px] sm:text-[42px] lg:text-[48px] leading-[1.03] tracking-tight max-w-xl text-ink">
+            <h3 className="mt-5 sm:mt-7 font-display font-bold text-[26px] sm:text-[42px] lg:text-[48px] leading-[1.03] tracking-tight max-w-xl text-ink">
               {card.title}
             </h3>
             <p className="mt-5 text-[15px] sm:text-[16px] leading-relaxed text-ink/70 max-w-lg">
@@ -697,7 +738,7 @@ function StickyMethodCard({
             </p>
             <div className="mt-8 inline-flex items-center gap-2 text-[13px] font-medium text-ink group/btn cursor-pointer">
               <span className="relative">
-                Explore this pillar
+                Explorer ce pilier
                 <span
                   className="absolute left-0 -bottom-0.5 h-px w-full origin-right scale-x-0 transition-transform duration-300 group-hover/btn:origin-left group-hover/btn:scale-x-100"
                   style={{ backgroundColor: card.accent }}
@@ -727,7 +768,7 @@ function MiniDashboard({ accent }: { accent: string }) {
     <div className="rounded-2xl bg-white/90 backdrop-blur border border-white shadow-soft p-4">
       <div className="flex items-center justify-between">
         <div className="text-[11px] uppercase tracking-[0.16em] text-muted2">
-          Alignment Index
+          Précision des Insights
         </div>
         <div
           className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
@@ -738,7 +779,7 @@ function MiniDashboard({ accent }: { accent: string }) {
       </div>
       <Sparkline />
       <div className="mt-3 grid grid-cols-3 gap-2">
-        {["Vision", "Plan", "Execution"].map((l, i) => (
+        {["Vision", "Plan", "Exécution"].map((l, i) => (
           <div key={l} className="rounded-lg bg-white border border-hair px-2 py-1.5">
             <div className="text-[10px] text-muted2">{l}</div>
             <div className="text-[13px] font-semibold text-ink">{[92, 84, 76][i]}</div>
@@ -755,7 +796,7 @@ function MiniBars({ accent }: { accent: string }) {
     <div className="rounded-2xl bg-white/90 backdrop-blur border border-white shadow-soft p-5">
       <div className="flex items-center justify-between mb-3">
         <div className="text-[11px] uppercase tracking-[0.16em] text-muted2">
-          Quarterly Lift
+          Gain d'Efficacité
         </div>
         <div
           className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
@@ -778,8 +819,8 @@ function MiniBars({ accent }: { accent: string }) {
         ))}
       </div>
       <div className="mt-2 flex justify-between text-[10px] text-muted2">
-        <span>Q1</span>
-        <span>Now</span>
+        <span>T1</span>
+        <span>Maintenant</span>
       </div>
     </div>
   );
@@ -787,9 +828,9 @@ function MiniBars({ accent }: { accent: string }) {
 
 /* ---------------- ABOUT ---------------- */
 function About() {
-  const tags = ["CEng", "MSc", "Royal Navy", "DISC Certified", "20+ Years Experience"];
+  const tags = ["Propulsé par l'IA", "Analyse en Temps Réel", "Infrastructure Sécurisée", "Accès Mondial", "Surveillance 24/7"];
   return (
-    <section className="relative py-28 lg:py-36">
+    <section id="about" className="relative py-28 lg:py-36">
       <div className="mx-auto max-w-7xl px-6 lg:px-10 grid lg:grid-cols-12 gap-12 items-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.94, y: 30 }}
@@ -806,7 +847,7 @@ function About() {
             <div className="absolute inset-0 dotted-bg opacity-20 z-10 pointer-events-none" />
             <img
               src={founderImg}
-              alt="Brad - External Chairman"
+              alt="VertexIQ"
               width={896}
               height={1152}
               loading="lazy"
@@ -814,10 +855,10 @@ function About() {
             />
             <div className="absolute bottom-5 left-5 right-5 z-20 rounded-2xl bg-white/90 backdrop-blur border border-hair p-4">
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted2">
-                Founder
+                Plateforme
               </div>
               <div className="font-display font-bold text-[20px] mt-1">
-                Brad - External Chairman
+                VertexIQ
               </div>
             </div>
           </motion.div>
@@ -825,15 +866,13 @@ function About() {
 
         <div className="lg:col-span-7">
           <Reveal>
-            <SectionLabel>About</SectionLabel>
+            <SectionLabel>À propos</SectionLabel>
           </Reveal>
           <Reveal as="h2" delay={0.05} className="mt-6 font-display font-bold text-[40px] sm:text-[56px] leading-[1.04]">
-            Your External Chairman
+            L'avenir du trading intelligent
           </Reveal>
           <Reveal as="p" delay={0.12} className="mt-6 text-[17px] leading-relaxed text-muted2 max-w-xl">
-            I'm a Chartered Engineer and former Royal Navy officer with 25+ years
-            inside engineering-led organisations. I work closely with founders to
-            build businesses that perform without heroic effort.
+            VertexIQ a été créé pour rendre la technologie de marché avancée accessible aux traders et aux professionnels du quotidien. En combinant l'intelligence artificielle, l'apprentissage automatique et l'intelligence de marché en temps réel, nous aidons les utilisateurs à prendre des décisions plus rapides, plus intelligentes et plus confiantes.
           </Reveal>
           <Stagger className="mt-8 flex flex-wrap gap-2.5">
             {tags.map((t) => (
@@ -860,32 +899,32 @@ function Testimonials() {
   const items = [
     {
       quote:
-        "Brad challenged me to step out of operational dependency and build real leadership capability. The clarity I gained transformed how my entire senior team operates. Decisions now happen without me.",
-      role: "MD, Specialist Engineering Manufacturer",
+        "Brad m'a poussé à sortir de la dépendance opérationnelle et à développer de véritables capacités de leadership. La clarté que j'ai acquise a transformé le fonctionnement de toute mon équipe dirigeante. Les décisions se prennent maintenant sans moi.",
+      role: "DG, Fabricant Spécialisé en Ingénierie",
       tint: "bg-grad-lavender",
     },
     {
       quote:
-        "Working with Brad transformed how I lead and how the market perceives our business. We went from founder-led sales to a fully functioning commercial team within eighteen months of working together.",
-      role: "Founder, Data Centre Safety Business",
+        "Travailler avec Brad a transformé ma façon de diriger et la perception du marché envers notre entreprise. Nous sommes passés d'une vente dirigée par le fondateur à une équipe commerciale pleinement fonctionnelle en dix-huit mois.",
+      role: "Plateforme, Entreprise de Sécurité des Centres de Données",
       tint: "bg-grad-pink",
     },
     {
       quote:
-        "We successfully transitioned to a systemised commercial engine, increasing enterprise value by over 40%. Brad's structured approach gave us a roadmap that actually worked in our specific sector.",
-      role: "CEO, Precision Aerospace Supplier",
+        "Nous avons réussi la transition vers un moteur commercial systématisé, augmentant la valeur de l'entreprise de plus de 40 %. L'approche structurée de Brad nous a fourni une feuille de route qui a vraiment fonctionné dans notre secteur spécifique.",
+      role: "PDG, Fournisseur Aérospatial de Précision",
       tint: "bg-grad-peach",
     },
     {
       quote:
-        "The Freedom Blueprint gave us the exact framework we needed to step away from day-to-day operations. For the first time in twelve years, I took a two-week holiday without fielding a single call.",
-      role: "Ops Director, Infrastructure Services",
+        "Le Cadre VertexIQ nous a fourni le cadre exact dont nous avions besoin pour nous éloigner des opérations quotidiennes. Pour la première fois en douze ans, j'ai pris des vacances de deux semaines sans décrocher un seul appel.",
+      role: "Directeur des Opérations, Services d'Infrastructure",
       tint: "bg-grad-mint",
     },
     {
       quote:
-        "Brad's strategic guidance helped us recruit and align our first board of directors successfully. The process was methodical. The result was a leadership team that genuinely shares our vision.",
-      role: "MD, Defence Equipment Supplier",
+        "Les conseils stratégiques de Brad nous ont aidés à recruter et aligner avec succès notre premier conseil d'administration. Le processus était méthodique. Le résultat était une équipe de direction qui partage genuinement notre vision.",
+      role: "DG, Fournisseur d'Équipements de Défense",
       tint: "bg-grad-lavender",
     },
   ];
@@ -894,14 +933,14 @@ function Testimonials() {
   const marqueeItems = [...items, ...items, ...items];
 
   return (
-    <section className="relative py-24 lg:py-32 overflow-hidden">
+    <section id="success-stories" className="relative py-24 lg:py-32 overflow-hidden">
       <div className="mx-auto max-w-7xl px-6 lg:px-10 mb-12">
         <div className="max-w-2xl">
           <Reveal>
-            <SectionLabel>Voices</SectionLabel>
+            <SectionLabel>Témoignages de Succès</SectionLabel>
           </Reveal>
           <Reveal as="h2" delay={0.05} className="mt-6 font-display font-bold text-[36px] sm:text-[48px] leading-[1.1]">
-            Trusted by founders who needed more than advice.
+            Approuvé par des investisseurs du monde entier
           </Reveal>
         </div>
       </div>
@@ -921,7 +960,7 @@ function Testimonials() {
           {marqueeItems.map((t, i) => (
             <div
               key={i}
-              className="group relative w-[340px] h-[300px] shrink-0 rounded-2xl bg-white border border-hair shadow-soft p-7 overflow-hidden flex flex-col justify-between"
+              className="group relative w-[280px] sm:w-[340px] h-[280px] sm:h-[300px] shrink-0 rounded-2xl bg-white border border-hair shadow-soft p-6 sm:p-7 overflow-hidden flex flex-col justify-between"
             >
               <div className={`pointer-events-none absolute -top-16 -right-16 w-40 h-40 rounded-full ${t.tint} blur-2xl opacity-50 group-hover:opacity-90 transition-opacity duration-500`} />
 
@@ -942,7 +981,8 @@ function Testimonials() {
 }
 
 /* ---------------- CTA ---------------- */
-function CtaStrip() {
+function CtaStrip({ onSignUp }: { onSignUp: () => void }) {
+  const navigate = useNavigate();
   return (
     <section id="cta" className="relative py-20 lg:py-28">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
@@ -951,7 +991,7 @@ function CtaStrip() {
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-[36px] bg-[#F7F4FF] border border-[#E4D9FB] shadow-soft p-10 lg:p-16"
+          className="relative overflow-hidden rounded-[32px] sm:rounded-[36px] bg-[#F7F4FF] border border-[#E4D9FB] shadow-soft p-6 sm:p-10 lg:p-16"
         >
           {/* warm lavender glow overlays */}
           <motion.div
@@ -964,35 +1004,34 @@ function CtaStrip() {
             transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
             className="pointer-events-none absolute -bottom-40 -left-20 w-[460px] h-[460px] rounded-full bg-[#FBE9F1]/80 blur-3xl"
           />
+          {/* subtle background styling */}
+          <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-grad-pink blur-[120px] opacity-40 rounded-full pointer-events-none" />
 
-          <div className="relative max-w-2xl">
-            <div className="inline-flex items-center gap-2 text-[11px] tracking-[0.18em] uppercase text-muted2">
-              <span className="size-1.5 rounded-full bg-ink/30" />
-              Get Started
-            </div>
-            <h2 className="mt-5 font-display font-bold text-ink text-[40px] sm:text-[56px] leading-[1.04]">
-              Two Ways to Start
+          <div className="relative z-10 max-w-2xl">
+            <h2 className="mt-4 sm:mt-5 font-display font-bold text-ink text-[32px] sm:text-[56px] leading-[1.04]">
+              Deux façons de commencer
             </h2>
             <p className="mt-5 text-ink/60 text-[16px] max-w-lg">
-              Pick the entry point that fits where you are right now. Both lead
-              to the same outcome: a business that performs without you.
+              Choisissez le chemin qui correspond le mieux à vos objectifs.
             </p>
           </div>
 
           <Stagger className="relative mt-12 grid md:grid-cols-2 gap-5">
             <CtaCard
-              kicker="Diagnostic"
-              title="Find Your Founder Dependency Score"
-              body="Five minutes. Immediate clarity."
-              button="Take the Diagnostic"
+              kicker="Accès Gratuit"
+              title="Explorer VertexIQ"
+              body="Découvrez comment l'analyse intelligente peut améliorer votre prise de décision."
+              button="Accès Gratuit"
               variant="diagnostic"
+              onClick={onSignUp}
             />
             <CtaCard
-              kicker="Conversation"
-              title="Book a Strategy Conversation"
-              body="30 minutes focused on your business."
-              button="Schedule Your Call"
+              kicker="Consultation Personnelle"
+              title="Réserver une Consultation Personnelle"
+              body="Découvrez comment VertexIQ peut s'adapter à votre stratégie d'investissement."
+              button="Planifier une Consultation"
               variant="conversation"
+              onClick={() => { navigate('/contact'); window.scrollTo(0,0); }}
             />
           </Stagger>
         </motion.div>
@@ -1007,12 +1046,14 @@ function CtaCard({
   body,
   button,
   variant,
+  onClick,
 }: {
   kicker: string;
   title: string;
   body: string;
   button: string;
   variant: "diagnostic" | "conversation";
+  onClick?: () => void;
 }) {
   const isDiag = variant === "diagnostic";
   return (
@@ -1020,7 +1061,7 @@ function CtaCard({
       variants={fadeUp}
       whileHover={{ y: -6 }}
       transition={{ type: "spring", stiffness: 220, damping: 22 }}
-      className={`rounded-3xl p-8 border transition-all duration-300 shadow-soft ${
+      className={`rounded-3xl p-6 sm:p-8 border transition-all duration-300 shadow-soft ${
         isDiag
           ? "bg-white border-hair hover:border-[#ccc] text-ink"
           : "bg-ink border-ink text-white"
@@ -1037,8 +1078,8 @@ function CtaCard({
         {body}
       </p>
       <Magnetic className="inline-block mt-7">
-        <motion.a
-          href="#"
+        <motion.button
+          onClick={onClick}
           whileHover={{ y: -2 }}
           whileTap={{ scale: 0.96 }}
           className={`group relative inline-flex items-center gap-2 rounded-full px-5 py-3 text-[13px] font-semibold overflow-hidden ${
@@ -1050,7 +1091,7 @@ function CtaCard({
           <span className="relative z-10">{button}</span>
           <ArrowRight className="relative z-10 size-4 transition-transform group-hover:translate-x-1" />
           <span className={`absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent ${isDiag ? "via-white/15" : "via-ink/10"} to-transparent transition-transform duration-700 group-hover:translate-x-full`} />
-        </motion.a>
+        </motion.button>
       </Magnetic>
     </motion.div>
   );
@@ -1063,13 +1104,13 @@ function Footer() {
       {/* big CTA wordmark block */}
       <div className="mx-auto max-w-7xl px-6 lg:px-10 pb-16 text-center">
         <Reveal as="p" className="text-[12px] tracking-[0.2em] uppercase text-ink/50">
-          Ready to step back?
+          Prêt à trader plus intelligemment ?
         </Reveal>
-        <Reveal as="h2" delay={0.05} className="mt-5 font-display font-bold text-[56px] sm:text-[88px] lg:text-[120px] leading-[0.95] text-ink">
-          VETERUS<span className="text-[#A78BFA]">.</span>
+        <Reveal as="h2" delay={0.05} className="mt-5 font-display font-bold text-[48px] sm:text-[88px] lg:text-[120px] leading-[0.95] text-ink">
+          VERTEXIQ<span className="text-[#A78BFA]">.</span>
         </Reveal>
         <Reveal as="p" delay={0.1} className="mt-5 mx-auto max-w-xl text-[15px] text-ink/60">
-          Strategic advisory for engineering-led founders who want a business that performs without them.
+          Intelligence de marché propulsée par l'IA conçue pour les investisseurs modernes qui recherchent des décisions plus intelligentes et une plus grande confiance.
         </Reveal>
         <Magnetic className="inline-block mt-8">
           <motion.a
@@ -1078,7 +1119,7 @@ function Footer() {
             whileTap={{ scale: 0.96 }}
             className="group relative inline-flex items-center gap-2 rounded-full bg-ink text-white px-7 py-4 text-[14px] font-semibold overflow-hidden"
           >
-            <span className="relative z-10">Book a Conversation</span>
+            <span className="relative z-10">Réserver une Consultation Personnelle</span>
             <ArrowRight className="relative z-10 size-4 transition-transform group-hover:translate-x-1" />
             <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
           </motion.a>
@@ -1092,32 +1133,32 @@ function Footer() {
             {/* brand col */}
             <div className="lg:col-span-4">
               <div className="font-display font-bold text-[22px]">
-                VETERUS<span className="text-[#A78BFA]">.</span>
+                VERTEXIQ<span className="text-[#A78BFA]">.</span>
               </div>
               <p className="mt-4 text-[14px] text-white/50 max-w-xs">
-                Strategic advisory for founders ready to build enterprise value.
+                Intelligence avancée. Décisions plus intelligentes. Meilleurs résultats.
               </p>
             </div>
             <FooterCol
-              title="Company"
-              links={["About Brad", "Success Stories", "Book a Strategy Call", "Contact"]}
+              title="Entreprise"
+              links={["À propos", "Témoignages", "Technologie", "Contact"]}
             />
             <FooterCol
-              title="Advisory"
+              title="Solutions"
               links={[
-                "Manufacturing Advisory",
-                "Engineering Advisory",
-                "Construction Advisory",
-                "Leadership Advisory",
-                "The Freedom Blueprint™",
+                "Analyse de Marché",
+                "Insights IA",
+                "Outils d'Automatisation",
+                "Intelligence des Risques",
+                "Suivi des Performances",
               ]}
             />
-            <FooterCol title="Legal" links={["Privacy Policy", "Terms", "Cookies"]} />
+            <FooterCol title="Légal" links={["Politique de Confidentialité", "Conditions d'Utilisation", "Cookies"]} />
           </div>
         </div>
         <div className="border-t border-white/10 mx-auto max-w-7xl px-6 lg:px-10 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] text-white/40">
-          <div>© 2026 Veterus Business Growth. All rights reserved.</div>
-          <div>Built for founders ready to step back.</div>
+          <div>© 2026 VertexIQ. Tous droits réservés.</div>
+          <div>Conçu pour les traders qui veulent clarté, rapidité et confiance dans chaque décision.</div>
         </div>
       </div>
     </footer>
@@ -1133,9 +1174,9 @@ function FooterCol({ title, links }: { title: string; links: string[] }) {
       <ul className="mt-5 space-y-3">
         {links.map((l) => (
           <li key={l}>
-            <a href="#" className="text-[14px] text-white/70 hover:text-white transition-colors">
+            <Link to={l === "Contact" ? "/contact" : "/#" + l.toLowerCase().replace(/ /g, "-")} className="text-[14px] text-white/70 hover:text-white transition-colors">
               {l}
-            </a>
+            </Link>
           </li>
         ))}
       </ul>
@@ -1153,6 +1194,244 @@ function SectionLabel({ children, center = false }: { children: React.ReactNode;
     >
       <span className="size-1.5 rounded-full bg-[#A78BFA]" />
       {children}
+    </div>
+  );
+}
+
+
+/* ---------------- AUTH MODAL ---------------- */
+function AuthModal({ mode, onClose }: { mode: 'login' | 'signup', onClose: () => void }) {
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSignupSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = Object.fromEntries(formData.entries());
+    console.log("Sending to admin mail:", data);
+    setSubmitted(true);
+    setTimeout(() => {
+      onClose();
+    }, 3000);
+  };
+
+  const handleLoginSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = Object.fromEntries(formData.entries());
+    console.log("Login captured email:", data.email);
+    window.location.href = "https://p.finance/en/cabinet/try-demo?a=x1uRlBpzKnqFMN&ac=smart-link&code=WELCOME50&click_id=pqmcmj.3.2q4e";
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] bg-ink/40 backdrop-blur-sm flex items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="relative w-full max-w-md bg-white rounded-3xl shadow-float p-6 sm:p-8"
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 p-2 rounded-full bg-[#FAFAFA] hover:bg-[#F0F0F0] transition-colors"
+        >
+          <X className="size-4" />
+        </button>
+
+        {mode === 'signup' && submitted ? (
+          <div className="text-center py-10">
+            <div className="mx-auto size-14 rounded-full bg-green-50 border border-green-100 flex items-center justify-center mb-5">
+              <Check className="size-6 text-green-600" />
+            </div>
+            <h3 className="font-display font-bold text-[24px] text-ink">
+              Inscription réussie !
+            </h3>
+            <p className="mt-3 text-[15px] text-muted2">
+              Nous avons bien reçu vos informations. Notre équipe vous contactera prochainement.
+            </p>
+          </div>
+        ) : mode === 'signup' ? (
+          <>
+            <div className="mb-8">
+              <h3 className="font-display font-bold text-[28px] text-ink">
+                Créer un Compte
+              </h3>
+              <p className="mt-2 text-[14px] text-muted2">
+                Rejoignez VertexIQ et accédez à l'analyse intelligente.
+              </p>
+            </div>
+            <form onSubmit={handleSignupSubmit} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Nom Complet</label>
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                  placeholder="Jean Dupont"
+                />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Adresse Email</label>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                  placeholder="jean@exemple.com"
+                />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Numéro de Téléphone</label>
+                <input
+                  name="phone"
+                  type="tel"
+                  required
+                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                  placeholder="+33 6 00 00 00 00"
+                />
+              </div>
+              <button
+                type="submit"
+                className="mt-4 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-3.5 hover:bg-black transition-colors"
+              >
+                S'inscrire
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <div className="mb-8">
+              <h3 className="font-display font-bold text-[28px] text-ink">
+                Connexion
+              </h3>
+              <p className="mt-2 text-[14px] text-muted2">
+                Entrez votre email pour accéder à la plateforme de trading.
+              </p>
+            </div>
+            <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Adresse Email</label>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                  placeholder="jean@exemple.com"
+                />
+              </div>
+              <button
+                type="submit"
+                className="mt-4 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-3.5 hover:bg-black transition-colors"
+              >
+                Suivant
+              </button>
+            </form>
+          </>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+
+/* ---------------- CONTACT PAGE ---------------- */
+function ContactPage() {
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    console.log("Contact form submitted:", Object.fromEntries(formData.entries()));
+    setSubmitted(true);
+  };
+
+  return (
+    <div className="pt-32 pb-24 lg:pt-40 lg:pb-32 px-6 lg:px-10 max-w-7xl mx-auto min-h-[80vh]">
+      <FadeSection className="max-w-2xl mx-auto">
+        <div className="inline-flex items-center gap-2 text-[11px] tracking-[0.18em] uppercase text-muted2">
+          <span className="size-1.5 rounded-full bg-[#A78BFA]" />
+          Nous Contacter
+        </div>
+        <h1 className="mt-6 font-display font-bold text-[40px] sm:text-[56px] leading-[1.05] text-ink">
+          Parlons de votre stratégie.
+        </h1>
+        <p className="mt-6 text-[16px] leading-relaxed text-muted2">
+          Remplissez le formulaire ci-dessous pour contacter l'équipe VertexIQ. Que vous ayez besoin d'une démonstration, d'une consultation ou d'un support technique, nous sommes là pour vous aider.
+        </p>
+
+        <div className="mt-12 bg-white rounded-3xl border border-hair shadow-soft p-8 sm:p-10">
+          {submitted ? (
+            <div className="text-center py-10">
+              <div className="mx-auto size-14 rounded-full bg-green-50 border border-green-100 flex items-center justify-center mb-5">
+                <Check className="size-6 text-green-600" />
+              </div>
+              <h3 className="font-display font-bold text-[24px] text-ink">
+                Message Envoyé !
+              </h3>
+              <p className="mt-3 text-[15px] text-muted2">
+                Merci de nous avoir contactés. Un membre de notre équipe vous répondra prochainement.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              <div>
+                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Nom Complet</label>
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3.5 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                  placeholder="Jean Dupont"
+                />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Adresse Email</label>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3.5 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                  placeholder="jean@exemple.com"
+                />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Numéro de Téléphone</label>
+                <input
+                  name="phone"
+                  type="tel"
+                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3.5 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                  placeholder="+33 6 00 00 00 00"
+                />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Message</label>
+                <textarea
+                  name="message"
+                  required
+                  rows={4}
+                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3.5 text-[14px] outline-none focus:border-[#A78BFA] transition-colors resize-none"
+                  placeholder="Comment pouvons-nous vous aider ?"
+                />
+              </div>
+              <button
+                type="submit"
+                className="mt-4 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-4 hover:bg-black transition-colors"
+              >
+                Envoyer le Message
+              </button>
+            </form>
+          )}
+        </div>
+      </FadeSection>
     </div>
   );
 }
