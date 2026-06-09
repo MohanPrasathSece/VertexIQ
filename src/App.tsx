@@ -194,10 +194,10 @@ function Nav({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void 
   const [menuOpen, setMenuOpen] = useState(false);
   const links = [
     { name: "Accueil", href: "/#home" },
-    { name: "À propos", href: "/#about" },
-    { name: "Technologie", href: "/#technology" },
-    { name: "Succès", href: "/#success-stories" },
     { name: "Insights", href: "/#insights" },
+    { name: "Technologie", href: "/#technology" },
+    { name: "À propos", href: "/#about" },
+    { name: "Succès", href: "/#success-stories" },
     { name: "Contact", href: "/contact" }
   ];
   return (
@@ -587,7 +587,6 @@ function Problem() {
                 {it.body}
               </p>
               <div className="mt-8 flex items-center text-[13px] text-ink opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                En savoir plus <ArrowUpRight className="size-3.5 ml-1" />
               </div>
             </motion.div>
           ))}
@@ -1141,19 +1140,31 @@ function Footer() {
             </div>
             <FooterCol
               title="Entreprise"
-              links={["À propos", "Témoignages", "Technologie", "Contact"]}
+              links={[
+                { label: "À propos", href: "/#about" },
+                { label: "Témoignages", href: "/#success-stories" },
+                { label: "Technologie", href: "/#technology" },
+                { label: "Contact", href: "/contact" },
+              ]}
             />
             <FooterCol
               title="Solutions"
               links={[
-                "Analyse de Marché",
-                "Insights IA",
-                "Outils d'Automatisation",
-                "Intelligence des Risques",
-                "Suivi des Performances",
+                { label: "Analyse de Marché", href: "/#insights" },
+                { label: "Insights IA", href: "/#insights" },
+                { label: "Outils d'Automatisation", href: "/#technology" },
+                { label: "Intelligence des Risques", href: "/#technology" },
+                { label: "Suivi des Performances", href: "/#technology" },
               ]}
             />
-            <FooterCol title="Légal" links={["Politique de Confidentialité", "Conditions d'Utilisation", "Cookies"]} />
+            <FooterCol
+              title="Légal"
+              links={[
+                { label: "Politique de Confidentialité", href: "/contact" },
+                { label: "Conditions d'Utilisation", href: "/contact" },
+                { label: "Cookies", href: "/contact" },
+              ]}
+            />
           </div>
         </div>
         <div className="border-t border-white/10 mx-auto max-w-7xl px-6 lg:px-10 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] text-white/40">
@@ -1165,7 +1176,7 @@ function Footer() {
   );
 }
 
-function FooterCol({ title, links }: { title: string; links: string[] }) {
+function FooterCol({ title, links }: { title: string; links: { label: string; href: string }[] }) {
   return (
     <div className="lg:col-span-2 lg:col-start-auto">
       <div className="text-[12px] uppercase tracking-[0.16em] text-white/40">
@@ -1173,9 +1184,9 @@ function FooterCol({ title, links }: { title: string; links: string[] }) {
       </div>
       <ul className="mt-5 space-y-3">
         {links.map((l) => (
-          <li key={l}>
-            <Link to={l === "Contact" ? "/contact" : "/#" + l.toLowerCase().replace(/ /g, "-")} className="text-[14px] text-white/70 hover:text-white transition-colors">
-              {l}
+          <li key={l.label}>
+            <Link to={l.href} className="text-[14px] text-white/70 hover:text-white transition-colors">
+              {l.label}
             </Link>
           </li>
         ))}
