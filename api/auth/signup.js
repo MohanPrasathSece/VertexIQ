@@ -1,31 +1,22 @@
-const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-});
+const { Resend } = require('resend');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const { name, email, phone } = req.body;
+    if (!name || !email) return res.status(400).json({ error: 'Name and email are required' });
 
-    if (!name || !email) {
-      return res.status(400).json({ error: 'Name and email are required' });
-    }
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const adminEmail = process.env.GMAIL_USER;
 
-    await transporter.sendMail({
-      from: `"VertexIQ" <${process.env.GMAIL_USER}>`,
-      to: process.env.GMAIL_USER,
+    await resend.emails.send({
+      from: 'VertexIQ <onboarding@resend.dev>',
+      to: adminEmail,
       subject: '🚀 Nouvel inscrit VertexIQ',
       html: `
         <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#f9f9f9;border-radius:12px;overflow:hidden">
@@ -38,8 +29,7 @@ module.exports = async function handler(req, res) {
             <p><strong>Téléphone:</strong> ${phone || 'Non renseigné'}</p>
             <p style="color:#999;font-size:12px;margin-top:24px">Inscrit le ${new Date().toLocaleString('fr-FR')}</p>
           </div>
-        </div>
-      `,
+        </div>`,
     });
 
     return res.status(201).json({ message: 'User signed up successfully' });
