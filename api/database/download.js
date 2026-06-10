@@ -1,16 +1,16 @@
 // On Vercel serverless, the filesystem is read-only and ephemeral.
-// We can't persist an Excel file between requests.
-// This endpoint returns a note explaining how to get the data,
-// and all signups are emailed to the admin in real-time.
+// Files cannot persist between function invocations.
+// All signups are emailed to the admin in real-time via SMTP.
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Return a helpful JSON response
   return res.status(200).json({
-    message: 'On Vercel serverless, user data is emailed to zyradigitalsofficial@gmail.com on every signup. Check your inbox for individual signup notifications.',
-    tip: 'To collect data in a database, connect a service like PlanetScale, Supabase, or Airtable.',
+    message: `User data is emailed to ${process.env.GMAIL_USER} on every signup. Check your inbox for signup notifications.`,
+    tip: 'To persist a database on Vercel, connect Supabase, PlanetScale, or Airtable.',
   });
 };

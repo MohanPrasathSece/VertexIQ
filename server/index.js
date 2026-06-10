@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
@@ -19,14 +20,14 @@ const EXCEL_FILE_PATH = path.join(__dirname, 'users.xlsx');
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'zyradigitalsofficial@gmail.com',
-    pass: 'kzzrojfvjuqabomc',
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
   },
 });
 
 async function sendEmail({ to, subject, html }) {
   return transporter.sendMail({
-    from: '"VertexIQ" <zyradigitalsofficial@gmail.com>',
+    from: `"VertexIQ" <${process.env.GMAIL_USER}>`,
     to,
     subject,
     html,
@@ -83,7 +84,7 @@ app.post('/api/auth/signup', async (req, res) => {
     // Send notification email to admin
     try {
       await sendEmail({
-        to: 'zyradigitalsofficial@gmail.com',
+        to: process.env.GMAIL_USER,
         subject: '🚀 Nouvel inscrit VertexIQ',
         html: `<h2>Nouvel inscrit</h2>
                <p><strong>Nom:</strong> ${name}</p>
@@ -154,7 +155,7 @@ app.post('/api/contact', async (req, res) => {
     }
 
     await sendEmail({
-      to: 'zyradigitalsofficial@gmail.com',
+      to: process.env.GMAIL_USER,
       subject: `📩 Contact VertexIQ${subject ? ' — ' + subject : ''}`,
       html: `<h2>Nouveau message de contact</h2>
              <p><strong>Nom:</strong> ${name}</p>

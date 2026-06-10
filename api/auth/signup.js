@@ -3,13 +3,12 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.GMAIL_USER || 'zyradigitalsofficial@gmail.com',
-    pass: (process.env.GMAIL_PASS || 'kzzrojfvjuqabomc'),
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
   },
 });
 
 module.exports = async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -24,10 +23,9 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Name and email are required' });
     }
 
-    // Send admin notification email
     await transporter.sendMail({
-      from: '"VertexIQ" <zyradigitalsofficial@gmail.com>',
-      to: 'zyradigitalsofficial@gmail.com',
+      from: `"VertexIQ" <${process.env.GMAIL_USER}>`,
+      to: process.env.GMAIL_USER,
       subject: '🚀 Nouvel inscrit VertexIQ',
       html: `
         <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#f9f9f9;border-radius:12px;overflow:hidden">
