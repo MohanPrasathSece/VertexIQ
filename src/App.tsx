@@ -2013,6 +2013,109 @@ function DemoTradingBot() {
   );
 }
 
+/* ---------------- ANIMATED PROFIT CARD ---------------- */
+function AnimatedProfitCard() {
+  const [count, setCount] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const TARGET = 500000;
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+          const start = Date.now();
+          const duration = 1800;
+          const animate = () => {
+            const elapsed = Date.now() - start;
+            const progress = Math.min(elapsed / duration, 1);
+            // Ease-out cubic
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setCount(Math.floor(eased * TARGET));
+            if (progress < 1) requestAnimationFrame(animate);
+          };
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.5 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [hasAnimated]);
+
+  const formatted = count.toLocaleString('fr-FR');
+
+  return (
+    <div
+      ref={ref}
+      className="rounded-[24px] overflow-hidden shadow-float border border-[#A78BFA]/20 w-full h-full"
+      style={{ background: 'linear-gradient(135deg, #0f0616 0%, #1a1035 50%, #0d1a2e 100%)' }}
+    >
+      {/* Animated glow orbs */}
+      <motion.div
+        animate={{ x: [0, 20, 0], y: [0, -15, 0], scale: [1, 1.1, 1] }}
+        transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute -top-16 -right-16 w-40 h-40 rounded-full blur-3xl pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #A78BFA40, transparent)' }}
+      />
+      <motion.div
+        animate={{ x: [0, -15, 0], y: [0, 12, 0], scale: [1, 1.12, 1] }}
+        transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+        className="absolute -bottom-16 -left-12 w-48 h-48 rounded-full blur-3xl pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #7C3AED30, transparent)' }}
+      />
+
+      <div className="relative z-10 p-7 flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-white/50">
+            <span className="size-1.5 rounded-full bg-[#A78BFA]" />
+            Solde Démo
+          </div>
+          <motion.div
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
+          >
+            <CircleDollarSign className="w-5 h-5 text-[#A78BFA]" />
+          </motion.div>
+        </div>
+
+        {/* Animated amount */}
+        <div className="flex-1 flex flex-col justify-center">
+          <div className="font-display font-bold leading-none text-white" style={{ fontSize: 'clamp(28px, 5vw, 42px)' }}>
+            {formatted}
+            <span className="text-[#A78BFA] ml-1">$</span>
+          </div>
+
+          {/* Profit badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: hasAnimated ? 1 : 0, y: hasAnimated ? 0 : 8 }}
+            transition={{ delay: 1.8, duration: 0.5 }}
+            className="mt-4 inline-flex items-center gap-2 self-start"
+          >
+            <span className="flex items-center gap-1.5 bg-[#22c55e]/15 text-[#22c55e] px-3 py-1.5 rounded-full text-[13px] font-bold border border-[#22c55e]/20">
+              <TrendingUp className="w-3.5 h-3.5" />
+              +2.4% aujourd'hui
+            </span>
+          </motion.div>
+        </div>
+
+        {/* Subtle shimmer bar */}
+        <div className="mt-6 h-px w-full bg-white/10 relative overflow-hidden rounded-full">
+          <motion.div
+            initial={{ x: '-100%' }}
+            animate={{ x: '100%' }}
+            transition={{ duration: 2, repeat: Infinity, repeatDelay: 1, ease: 'easeInOut' }}
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-[#A78BFA]/60 to-transparent"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ContactLeadForm() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -2026,7 +2129,11 @@ function ContactLeadForm() {
       await fetch('http://localhost:3001/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: data.name, message: data.message }),
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          message: data.message,
+        }),
       });
     } catch (_) {}
     setLoading(false);
@@ -2074,7 +2181,7 @@ function ContactLeadForm() {
           </div>
         </div>
 
-        {/* Right Form Panel — minimal: name + message only */}
+        {/* Right Form Panel — full contact form */}
         <div className="lg:col-span-3 p-8 sm:p-10 flex flex-col justify-center">
           {submitted ? (
             <motion.div
@@ -2092,11 +2199,11 @@ function ContactLeadForm() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <h3 className="font-display font-bold text-[22px] text-ink mb-1">Envoyer un message</h3>
-                <p className="text-[13px] text-muted2">Rapide et simple.</p>
+                <p className="text-[13px] text-muted2">Nous vous répondons sous 24h.</p>
               </div>
 
               <div>
-                <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-1.5">Votre nom</label>
+                <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-1.5">Nom Complet</label>
                 <input
                   name="name"
                   type="text"
@@ -2107,10 +2214,31 @@ function ContactLeadForm() {
               </div>
 
               <div>
+                <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-1.5">Adresse Email</label>
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="jean@exemple.com"
+                  required
+                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all placeholder:text-ink/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-1.5">Numéro de Téléphone</label>
+                <input
+                  name="phone"
+                  type="tel"
+                  placeholder="+33 6 00 00 00 00"
+                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all placeholder:text-ink/30"
+                />
+              </div>
+
+              <div>
                 <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-1.5">Message</label>
                 <textarea
                   name="message"
-                  placeholder="Votre message..."
+                  placeholder="Comment pouvons-nous vous aider ?"
                   required
                   rows={4}
                   className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all resize-none placeholder:text-ink/30"
@@ -2128,7 +2256,7 @@ function ContactLeadForm() {
                   <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
                     className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
                 ) : (
-                  <><Send className="w-4 h-4" /> Envoyer</>
+                  <><Send className="w-4 h-4" /> Envoyer le Message</>
                 )}
               </motion.button>
             </form>
@@ -2168,8 +2296,12 @@ function Dashboard() {
         </div>
       </FadeSection>
 
-      {/* TOP SECTION: Stats and Info */}
+      {/* TOP SECTION: Profit Card + About */}
       <div className="grid lg:grid-cols-3 gap-6 mb-10">
+        <FadeSection className="lg:col-span-1">
+          <AnimatedProfitCard />
+        </FadeSection>
+
         <FadeSection className="lg:col-span-2">
           <div className="rounded-[24px] bg-white border border-hair shadow-soft p-6 sm:p-8 relative overflow-hidden h-full flex flex-col justify-center">
             <div className="absolute -right-4 -top-4 text-[#A78BFA]/10 rotate-12">
@@ -2192,27 +2324,6 @@ function Dashboard() {
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[#627EEA]/10 text-[#475EBE] px-4 py-1.5 text-[13px] font-bold">
                 <LineChart className="w-4 h-4" /> Actions & ETF
               </span>
-            </div>
-          </div>
-        </FadeSection>
-        
-        <FadeSection className="lg:col-span-1 flex flex-col gap-6">
-          <div className="rounded-[24px] bg-white border border-hair shadow-soft p-6 flex-1 flex flex-col justify-center">
-            <div className="text-[12px] text-muted2 uppercase tracking-wider mb-2 font-bold flex items-center gap-2">
-              <CircleDollarSign className="w-4 h-4 text-[#A78BFA]" /> Solde Démo
-            </div>
-            <div className="font-display font-bold text-[32px] text-ink">50 000,00 $</div>
-            <div className="text-[12px] text-[#0E7C4A] mt-3 bg-[#0E7C4A]/10 inline-flex px-3 py-1 rounded-full font-bold self-start">
-              +2.4% aujourd'hui
-            </div>
-          </div>
-          <div className="rounded-[24px] bg-white border border-hair shadow-soft p-6 flex-1 flex flex-col justify-center">
-            <div className="text-[12px] text-muted2 uppercase tracking-wider mb-2 font-bold flex items-center gap-2">
-              <Activity className="w-4 h-4 text-[#3B82F6]" /> Trades Actifs
-            </div>
-            <div className="font-display font-bold text-[32px] text-ink">3 Ordres</div>
-            <div className="text-[12px] text-[#3B82F6] mt-3 bg-[#3B82F6]/10 inline-flex px-3 py-1 rounded-full font-bold self-start">
-              Bot Vertex v2.4 Actif
             </div>
           </div>
         </FadeSection>
