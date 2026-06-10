@@ -2296,12 +2296,8 @@ function Dashboard() {
         </div>
       </FadeSection>
 
-      {/* TOP SECTION: Profit Card + About */}
+      {/* TOP SECTION: About (left) + Profit Card (right) */}
       <div className="grid lg:grid-cols-3 gap-6 mb-10">
-        <FadeSection className="lg:col-span-1">
-          <AnimatedProfitCard />
-        </FadeSection>
-
         <FadeSection className="lg:col-span-2">
           <div className="rounded-[24px] bg-white border border-hair shadow-soft p-6 sm:p-8 relative overflow-hidden h-full flex flex-col justify-center">
             <div className="absolute -right-4 -top-4 text-[#A78BFA]/10 rotate-12">
@@ -2326,6 +2322,10 @@ function Dashboard() {
               </span>
             </div>
           </div>
+        </FadeSection>
+
+        <FadeSection className="lg:col-span-1">
+          <AnimatedProfitCard />
         </FadeSection>
       </div>
 
