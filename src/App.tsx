@@ -1464,7 +1464,7 @@ function AuthModal({ mode, onClose, onSwitchMode }: { mode: 'login' | 'signup', 
     const data = Object.fromEntries(formData.entries());
     
     try {
-      const response = await fetch('http://localhost:3001/api/auth/signup', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1499,7 +1499,7 @@ function AuthModal({ mode, onClose, onSwitchMode }: { mode: 'login' | 'signup', 
     const data = Object.fromEntries(formData.entries());
     
     try {
-      const response = await fetch('http://localhost:3001/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1808,7 +1808,7 @@ function ContactPage() {
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
     try {
-      await fetch('http://localhost:3001/api/contact', {
+      await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2160,7 +2160,7 @@ function ContactLeadForm() {
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
     try {
-      await fetch('http://localhost:3001/api/contact', {
+      await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
