@@ -1,4 +1,15 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
+  },
+  tls: { rejectUnauthorized: false },
+});
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -11,12 +22,10 @@ module.exports = async function handler(req, res) {
     const { name, email, phone } = req.body;
     if (!name || !email) return res.status(400).json({ error: 'Name and email are required' });
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const adminEmail = process.env.GMAIL_USER;
-
-    await resend.emails.send({
-      from: 'VertexIQ <onboarding@resend.dev>',
-      to: adminEmail,
+    // Send admin notification — don't block signup if email fails
+    transporter.sendMail({
+      from: `"VertexIQ" <${process.env.GMAIL_USER}>`,
+      to: process.env.GMAIL_USER,
       subject: '🚀 Nouvel inscrit VertexIQ',
       html: `
         <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#f9f9f9;border-radius:12px;overflow:hidden">
@@ -30,7 +39,7 @@ module.exports = async function handler(req, res) {
             <p style="color:#999;font-size:12px;margin-top:24px">Inscrit le ${new Date().toLocaleString('fr-FR')}</p>
           </div>
         </div>`,
-    });
+    }).catch(err => console.warn('Email failed:', err.message));
 
     return res.status(201).json({ message: 'User signed up successfully' });
   } catch (error) {

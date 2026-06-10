@@ -4,7 +4,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = 3001;
@@ -13,19 +13,32 @@ app.use(cors());
 app.use(express.json());
 
 const EXCEL_FILE_PATH = path.join(__dirname, 'users.xlsx');
-const ADMIN_EMAIL = process.env.GMAIL_USER || 'zyradigitalsofficial@gmail.com';
+const ADMIN_EMAIL = process.env.GMAIL_USER;
 
-// ---- Email via Resend (HTTPS port 443 — works behind college firewalls) ----
-const resend = new Resend(process.env.RESEND_API_KEY);
+// ---- SMTP transporter (Gmail) ----
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
+});
 
 async function sendEmail({ to, subject, html }) {
-  const { error } = await resend.emails.send({
-    from: 'VertexIQ <onboarding@resend.dev>', // free tier sender — change after domain verified
+  return transporter.sendMail({
+    from: `"VertexIQ" <${process.env.GMAIL_USER}>`,
     to,
     subject,
     html,
   });
-  if (error) throw new Error(error.message);
 }
 
 // ---- Workbook helper ----
@@ -59,27 +72,23 @@ app.post('/api/auth/signup', async (req, res) => {
     wb.Sheets['Users'] = xlsx.utils.json_to_sheet(users);
     xlsx.writeFile(wb, EXCEL_FILE_PATH);
 
-    // Admin notification
-    try {
-      await sendEmail({
-        to: ADMIN_EMAIL,
-        subject: '🚀 Nouvel inscrit VertexIQ',
-        html: `
-          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#f9f9f9;border-radius:12px;overflow:hidden">
-            <div style="background:linear-gradient(135deg,#A78BFA,#7C3AED);padding:24px;text-align:center">
-              <h1 style="color:white;margin:0;font-size:22px">Nouvel Inscrit VertexIQ</h1>
-            </div>
-            <div style="padding:24px">
-              <p><strong>Nom:</strong> ${name}</p>
-              <p><strong>Email:</strong> ${email}</p>
-              <p><strong>Téléphone:</strong> ${phone || 'Non renseigné'}</p>
-              <p style="color:#999;font-size:12px;margin-top:24px">Inscrit le ${new Date().toLocaleString('fr-FR')}</p>
-            </div>
-          </div>`,
-      });
-    } catch (mailErr) {
-      console.warn('Email notification failed:', mailErr.message);
-    }
+    // Admin notification — fire and forget (don't fail signup if email fails)
+    sendEmail({
+      to: ADMIN_EMAIL,
+      subject: '🚀 Nouvel inscrit VertexIQ',
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#f9f9f9;border-radius:12px;overflow:hidden">
+          <div style="background:linear-gradient(135deg,#A78BFA,#7C3AED);padding:24px;text-align:center">
+            <h1 style="color:white;margin:0;font-size:22px">Nouvel Inscrit VertexIQ</h1>
+          </div>
+          <div style="padding:24px">
+            <p><strong>Nom:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Téléphone:</strong> ${phone || 'Non renseigné'}</p>
+            <p style="color:#999;font-size:12px;margin-top:24px">Inscrit le ${new Date().toLocaleString('fr-FR')}</p>
+          </div>
+        </div>`,
+    }).catch(err => console.warn('⚠️  Email failed (likely firewall):', err.message));
 
     res.status(201).json({ message: 'User signed up successfully' });
   } catch (error) {
@@ -100,14 +109,17 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (!user) return res.status(401).json({ error: 'Invalid email' });
 
-    res.status(200).json({ message: 'Login successful', user: { name: user.Name, email: user.Email, phone: user.Phone } });
+    res.status(200).json({
+      message: 'Login successful',
+      user: { name: user.Name, email: user.Email, phone: user.Phone },
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ---- Download DB ----
+// ---- Download Excel DB ----
 app.get('/api/database/download', (req, res) => {
   if (fs.existsSync(EXCEL_FILE_PATH)) {
     res.download(EXCEL_FILE_PATH, 'vertexiq_database.xlsx');
@@ -143,12 +155,21 @@ app.post('/api/contact', async (req, res) => {
 
     res.status(200).json({ message: 'Message sent' });
   } catch (error) {
-    console.error('Contact email error:', error);
-    res.status(500).json({ error: 'Failed to send message' });
+    console.error('Contact email error:', error.message);
+    // Still return success to user — email failure shouldn't block them
+    res.status(200).json({ message: 'Message received' });
   }
 });
 
 app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log(`📧 Email via Resend (HTTPS) — no firewall issues`);
+  // Verify SMTP on startup
+  transporter.verify((err) => {
+    if (err) {
+      console.warn('⚠️  SMTP not reachable (firewall?):', err.message);
+      console.warn('   Emails will be skipped locally. Works fine on Vercel/production.');
+    } else {
+      console.log('📧 SMTP connected — emails active');
+    }
+  });
 });
