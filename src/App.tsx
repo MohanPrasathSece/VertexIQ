@@ -27,6 +27,9 @@ import {
   RefreshCw,
   Download,
   CheckCircle2,
+  Zap,
+  TrendingDown,
+  BarChart2,
 } from "lucide-react";
 import {
   motion,
@@ -35,7 +38,7 @@ import {
   useMotionValue,
   type Variants,
 } from "motion/react";
-import { useRef, useState, useEffect, type ReactNode, type MouseEvent } from "react";
+import { useRef, useState, useEffect, useCallback, type ReactNode, type MouseEvent } from "react";
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { ResponsiveContainer, LineChart as RechartsLineChart, Line, YAxis, XAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -141,6 +144,273 @@ function FadeSection({ children, className = "" }: { children: ReactNode; classN
   );
 }
 
+/* ---------------- CRYPTO ANIMATIONS ---------------- */
+
+// Coin streak that flies across the full screen (triggered on button click)
+const COIN_ICONS = [Bitcoin, Coins, CircleDollarSign, Zap, TrendingUp, BarChart2];
+const COIN_LABELS = ["BTC", "ETH", "BNB", "SOL", "USDT", "XRP"];
+const COIN_COLORS = ["#F7931A", "#627EEA", "#F3BA2F", "#9945FF", "#26A17B", "#346AA9"];
+
+interface CoinStreak {
+  id: number;
+  y: number; // percentage from top
+  delay: number;
+  duration: number;
+  coinIdx: number;
+  size: number;
+  label: string;
+  price: string;
+  change: string;
+  positive: boolean;
+}
+
+function CoinStreakOverlay({ streaks, onDone }: { streaks: CoinStreak[]; onDone: (id: number) => void }) {
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[300] overflow-hidden">
+      <AnimatePresence>
+        {streaks.map((s) => {
+          const Icon = COIN_ICONS[s.coinIdx % COIN_ICONS.length];
+          const color = COIN_COLORS[s.coinIdx % COIN_COLORS.length];
+          return (
+            <motion.div
+              key={s.id}
+              initial={{ x: "-120px", opacity: 0 }}
+              animate={{ x: "110vw", opacity: [0, 1, 1, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: s.duration, delay: s.delay, ease: [0.12, 0, 0.39, 0] }}
+              onAnimationComplete={() => onDone(s.id)}
+              style={{ top: `${s.y}%`, position: "absolute" }}
+              className="flex items-center gap-2"
+            >
+              {/* glow trail */}
+              <motion.div
+                style={{ background: `linear-gradient(90deg, transparent, ${color}40, transparent)` }}
+                className="absolute right-0 w-32 h-6 -translate-x-2 blur-md"
+              />
+              <div
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 shadow-lg border border-white/20"
+                style={{ backgroundColor: "#111", backdropFilter: "blur(8px)" }}
+              >
+                <Icon style={{ color, width: s.size, height: s.size }} />
+                <span className="font-mono font-bold text-white text-[12px]">{s.label}</span>
+                <span className="font-mono text-[11px]" style={{ color: s.positive ? "#22c55e" : "#ef4444" }}>
+                  {s.change}
+                </span>
+                <span className="font-mono text-white/60 text-[11px]">{s.price}</span>
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Hook to fire coin streaks
+let _coinId = 0;
+function useCoinStreak() {
+  const [streaks, setStreaks] = useState<CoinStreak[]>([]);
+
+  const fire = useCallback(() => {
+    const count = 6 + Math.floor(Math.random() * 4);
+    const newStreaks: CoinStreak[] = Array.from({ length: count }, (_, i) => {
+      const coinIdx = Math.floor(Math.random() * COIN_ICONS.length);
+      const positive = Math.random() > 0.35;
+      const price = `$${(Math.random() * 60000 + 100).toFixed(2)}`;
+      const change = `${positive ? "+" : "-"}${(Math.random() * 12).toFixed(2)}%`;
+      return {
+        id: ++_coinId,
+        y: 8 + Math.random() * 84,
+        delay: i * 0.08,
+        duration: 1.1 + Math.random() * 0.6,
+        coinIdx,
+        size: 14 + Math.floor(Math.random() * 6),
+        label: COIN_LABELS[coinIdx % COIN_LABELS.length],
+        price,
+        change,
+        positive,
+      };
+    });
+    setStreaks((prev) => [...prev, ...newStreaks]);
+  }, []);
+
+  const remove = useCallback((id: number) => {
+    setStreaks((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+
+  return { streaks, fire, remove };
+}
+
+// Floating crypto tickers inside modal background
+const TICKER_DATA = [
+  { label: "BTC/USDT", value: "+4.2%", color: "#F7931A" },
+  { label: "ETH/USDT", value: "+2.8%", color: "#627EEA" },
+  { label: "BNB/USDT", value: "-1.1%", color: "#F3BA2F" },
+  { label: "SOL/USDT", value: "+9.4%", color: "#9945FF" },
+  { label: "XRP/USDT", value: "+3.7%", color: "#346AA9" },
+];
+
+function ModalCryptoBg() {
+  return (
+    <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
+      {/* animated gradient orbs */}
+      <motion.div
+        animate={{ x: [0, 30, 0], y: [0, -20, 0], scale: [1, 1.1, 1] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -top-16 -right-16 w-48 h-48 rounded-full blur-3xl"
+        style={{ background: "radial-gradient(circle, #A78BFA30, transparent)" }}
+      />
+      <motion.div
+        animate={{ x: [0, -20, 0], y: [0, 15, 0], scale: [1, 1.15, 1] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        className="absolute -bottom-20 -left-10 w-56 h-56 rounded-full blur-3xl"
+        style={{ background: "radial-gradient(circle, #F7931A20, transparent)" }}
+      />
+
+      {/* floating ticker chips */}
+      {TICKER_DATA.map((t, i) => (
+        <motion.div
+          key={t.label}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: [0, 0.18, 0.18, 0], y: [10, 0, 0, -10] }}
+          transition={{
+            duration: 4,
+            delay: i * 0.9,
+            repeat: Infinity,
+            repeatDelay: TICKER_DATA.length * 0.9,
+            ease: "easeInOut",
+          }}
+          className="absolute text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border"
+          style={{
+            left: `${10 + i * 18}%`,
+            top: `${15 + (i % 3) * 25}%`,
+            color: t.color,
+            borderColor: `${t.color}40`,
+            backgroundColor: `${t.color}10`,
+          }}
+        >
+          {t.label} {t.value}
+        </motion.div>
+      ))}
+
+      {/* fast scan line */}
+      <motion.div
+        initial={{ x: "-100%" }}
+        animate={{ x: "200%" }}
+        transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
+        className="absolute top-0 left-0 w-1/3 h-full"
+        style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.06), transparent)" }}
+      />
+    </div>
+  );
+}
+
+// Payment success flash — Razorpay/GPay style sweep
+function PaymentSuccessFlash({ show }: { show: boolean }) {
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-3xl overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 50%, #16213e 100%)" }}
+        >
+          {/* sweep shimmer */}
+          <motion.div
+            initial={{ x: "-100%", skewX: -15 }}
+            animate={{ x: "200%" }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="absolute inset-0 w-1/2"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.3), transparent)" }}
+          />
+
+          {/* circle burst */}
+          <motion.div
+            initial={{ scale: 0, opacity: 1 }}
+            animate={{ scale: 6, opacity: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="absolute w-24 h-24 rounded-full"
+            style={{ background: "radial-gradient(circle, #A78BFA80, transparent)" }}
+          />
+
+          {/* check icon */}
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 18, delay: 0.3 }}
+            className="w-20 h-20 rounded-full flex items-center justify-center mb-4 border-2 border-[#A78BFA]"
+            style={{ background: "rgba(167,139,250,0.15)" }}
+          >
+            <Check className="w-10 h-10 text-[#A78BFA]" />
+          </motion.div>
+
+          {/* flying coins */}
+          {[...Array(8)].map((_, i) => {
+            const angle = (i / 8) * Math.PI * 2;
+            return (
+              <motion.div
+                key={i}
+                initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                animate={{
+                  x: Math.cos(angle) * 80,
+                  y: Math.sin(angle) * 80,
+                  opacity: 0,
+                  scale: 0.3,
+                }}
+                transition={{ duration: 0.7, delay: 0.25 + i * 0.04, ease: "easeOut" }}
+                className="absolute"
+                style={{ color: COIN_COLORS[i % COIN_COLORS.length] }}
+              >
+                <Coins className="w-5 h-5" />
+              </motion.div>
+            );
+          })}
+
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="font-display font-bold text-white text-[22px]"
+          >
+            Inscription réussie !
+          </motion.p>
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.65 }}
+            className="mt-2 text-white/50 text-[13px]"
+          >
+            Bienvenue sur VertexIQ
+          </motion.p>
+
+          {/* bottom ticker strip */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="absolute bottom-5 left-5 right-5 flex justify-between"
+          >
+            {["BTC +4.2%", "ETH +2.8%", "SOL +9.4%"].map((t, i) => (
+              <motion.span
+                key={t}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 + i * 0.1 }}
+                className="text-[11px] font-mono"
+                style={{ color: COIN_COLORS[i] }}
+              >
+                {t}
+              </motion.span>
+            ))}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function Home({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void }) {
   const location = useLocation();
   
@@ -184,12 +454,17 @@ function Home({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void
 
 export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup' | null>(null);
+  const { streaks, fire: fireCoinStreak, remove: removeCoinStreak } = useCoinStreak();
+
+  const handleSignUp = () => { fireCoinStreak(); setAuthMode('signup'); };
+  const handleLogin = () => { fireCoinStreak(); setAuthMode('login'); };
 
   return (
     <div className="bg-canvas text-ink min-h-screen overflow-x-clip">
-      <Nav onSignUp={() => setAuthMode('signup')} onLogin={() => setAuthMode('login')} />
+      <CoinStreakOverlay streaks={streaks} onDone={removeCoinStreak} />
+      <Nav onSignUp={handleSignUp} onLogin={handleLogin} />
       <Routes>
-        <Route path="/" element={<Home onSignUp={() => setAuthMode('signup')} onLogin={() => setAuthMode('login')} />} />
+        <Route path="/" element={<Home onSignUp={handleSignUp} onLogin={handleLogin} />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
@@ -1316,56 +1591,79 @@ function AuthModal({ mode, onClose, onSwitchMode }: { mode: 'login' | 'signup', 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] bg-ink/40 backdrop-blur-sm flex items-center justify-center p-4"
+      transition={{ duration: 0.25 }}
+      className="fixed inset-0 z-[200] bg-ink/60 backdrop-blur-md flex items-center justify-center p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
     >
+      {/* aggressive entry: slam in from top with bounce */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, scale: 0.7, y: -120, rotate: -4 }}
+        animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
+        exit={{ opacity: 0, scale: 0.85, y: 40 }}
+        transition={{ type: "spring", stiffness: 380, damping: 22, mass: 0.8 }}
         className="relative w-full max-w-md bg-white rounded-3xl shadow-float p-6 sm:p-8 overflow-hidden"
       >
-        {/* Decorative Crypto/Finance elements */}
-        <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="absolute -top-10 -right-10 text-[#F3BA2F]/10 pointer-events-none">
-          <CircleDollarSign className="w-40 h-40" />
-        </motion.div>
-        <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-5 -left-5 text-[#F7931A]/10 pointer-events-none">
-          <Bitcoin className="w-20 h-20" />
-        </motion.div>
+        {/* animated crypto background */}
+        <ModalCryptoBg />
 
+        {/* payment success flash overlay */}
+        <PaymentSuccessFlash show={mode === 'signup' && submitted} />
+
+        {/* close button */}
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 p-2 rounded-full bg-[#FAFAFA] hover:bg-[#F0F0F0] transition-colors"
+          className="absolute top-5 right-5 z-30 p-2 rounded-full bg-[#FAFAFA] hover:bg-[#F0F0F0] transition-colors"
         >
           <X className="size-4" />
         </button>
 
-        {mode === 'signup' && submitted ? (
-          <div className="text-center py-10">
-            <div className="mx-auto size-14 rounded-full bg-green-50 border border-green-100 flex items-center justify-center mb-5">
-              <Check className="size-6 text-green-600" />
-            </div>
-            <h3 className="font-display font-bold text-[24px] text-ink">
-              Inscription réussie !
-            </h3>
-            <p className="mt-3 text-[15px] text-muted2">
-              Nous avons bien reçu vos informations. Redirection vers le tableau de bord...
-            </p>
-          </div>
-        ) : mode === 'signup' ? (
-          <>
-            <div className="mb-8">
-              <h3 className="font-display font-bold text-[28px] text-ink">
-                Créer un Compte
-              </h3>
-              <p className="mt-2 text-[14px] text-muted2">
-                Rejoignez VertexIQ et accédez à l'analyse intelligente.
-              </p>
+        {/* content — hidden when success flash is showing */}
+        <div className={mode === 'signup' && submitted ? "invisible" : ""}>
+          {mode === 'signup' ? (
+            <>
+              {/* header with animated icon */}
+              <div className="mb-6 flex items-start justify-between">
+                <div>
+                  <motion.div
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.15, type: "spring", stiffness: 300 }}
+                    className="flex items-center gap-2 mb-2"
+                  >
+                    <motion.div
+                      animate={{ rotate: [0, 15, -15, 0], scale: [1, 1.15, 1] }}
+                      transition={{ duration: 1.2, delay: 0.4, repeat: Infinity, repeatDelay: 3 }}
+                    >
+                      <Bitcoin className="w-6 h-6 text-[#F7931A]" />
+                    </motion.div>
+                    <motion.div
+                      animate={{ y: [0, -4, 0] }}
+                      transition={{ duration: 1.5, delay: 0.6, repeat: Infinity, repeatDelay: 2 }}
+                    >
+                      <TrendingUp className="w-5 h-5 text-[#A78BFA]" />
+                    </motion.div>
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1.8, delay: 0.8, repeat: Infinity, repeatDelay: 2.5 }}
+                    >
+                      <Zap className="w-5 h-5 text-[#F3BA2F]" />
+                    </motion.div>
+                  </motion.div>
+                  <h3 className="font-display font-bold text-[28px] text-ink">
+                    Créer un Compte
+                  </h3>
+                  <p className="mt-1 text-[14px] text-muted2">
+                    Rejoignez VertexIQ et accédez à l'analyse intelligente.
+                  </p>
+                </div>
+              </div>
+
               {error && (
-                <div className="mt-2 text-[14px] text-red-500 font-medium">
+                <div className="mb-4 text-[14px] text-red-500 font-medium bg-red-50 rounded-xl px-4 py-2">
                   {error === 'Email already in use' ? 'Email déjà enregistré.' : error}
                   {error === 'Email already in use' && onSwitchMode && (
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => onSwitchMode('login')}
                       className="ml-2 underline font-bold"
                     >
@@ -1374,81 +1672,151 @@ function AuthModal({ mode, onClose, onSwitchMode }: { mode: 'login' | 'signup', 
                   )}
                 </div>
               )}
-            </div>
-            <form onSubmit={handleSignupSubmit} className="flex flex-col gap-4">
-              <div>
-                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Nom Complet</label>
-                <input
-                  name="name"
-                  type="text"
-                  required
-                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
-                  placeholder="Jean Dupont"
-                />
-              </div>
-              <div>
-                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Adresse Email</label>
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
-                  placeholder="jean@exemple.com"
-                />
-              </div>
-              <div>
-                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Numéro de Téléphone</label>
-                <input
-                  name="phone"
-                  type="tel"
-                  required
-                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
-                  placeholder="+33 6 00 00 00 00"
-                />
+
+              <form onSubmit={handleSignupSubmit} className="flex flex-col gap-4">
+                <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.18 }}>
+                  <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Nom Complet</label>
+                  <input
+                    name="name"
+                    type="text"
+                    required
+                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                    placeholder="Jean Dupont"
+                  />
+                </motion.div>
+                <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.24 }}>
+                  <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Adresse Email</label>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                    placeholder="jean@exemple.com"
+                  />
+                </motion.div>
+                <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.30 }}>
+                  <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Numéro de Téléphone</label>
+                  <input
+                    name="phone"
+                    type="tel"
+                    required
+                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                    placeholder="+33 6 00 00 00 00"
+                  />
+                </motion.div>
+
+                <motion.div initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.36 }}>
+                  <motion.button
+                    type="submit"
+                    disabled={loading}
+                    whileHover={{ scale: 1.02, boxShadow: "0 0 24px rgba(167,139,250,0.5)" }}
+                    whileTap={{ scale: 0.97 }}
+                    className="mt-2 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-3.5 hover:bg-black transition-colors disabled:opacity-70 relative overflow-hidden"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <motion.span
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                          className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                        />
+                        Traitement...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <Zap className="w-4 h-4 text-[#F3BA2F]" />
+                        S'inscrire
+                        <ArrowRight className="w-4 h-4" />
+                      </span>
+                    )}
+                    {/* shimmer sweep on hover */}
+                    <motion.span
+                      initial={{ x: "-100%", skewX: -15 }}
+                      whileHover={{ x: "200%" }}
+                      transition={{ duration: 0.6 }}
+                      className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none"
+                    />
+                  </motion.button>
+                </motion.div>
+              </form>
+            </>
+          ) : (
+            <>
+              <div className="mb-6">
+                <motion.div
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.15, type: "spring", stiffness: 300 }}
+                  className="flex items-center gap-2 mb-2"
+                >
+                  <motion.div
+                    animate={{ rotateY: [0, 360] }}
+                    transition={{ duration: 2, delay: 0.5, repeat: Infinity, repeatDelay: 4 }}
+                  >
+                    <CircleDollarSign className="w-6 h-6 text-[#F3BA2F]" />
+                  </motion.div>
+                  <motion.div
+                    animate={{ scale: [1, 1.3, 1] }}
+                    transition={{ duration: 1, delay: 1, repeat: Infinity, repeatDelay: 3 }}
+                  >
+                    <BarChart2 className="w-5 h-5 text-[#627EEA]" />
+                  </motion.div>
+                </motion.div>
+                <h3 className="font-display font-bold text-[28px] text-ink">Connexion</h3>
+                <p className="mt-1 text-[14px] text-muted2">
+                  Accédez à votre plateforme de trading.
+                </p>
+                {error && <p className="mt-2 text-[14px] text-red-500 font-medium bg-red-50 rounded-xl px-4 py-2">{error}</p>}
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="mt-4 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-3.5 hover:bg-black transition-colors disabled:opacity-70"
-              >
-                {loading ? 'Chargement...' : 'S\'inscrire'}
-              </button>
-            </form>
-          </>
-        ) : (
-          <>
-            <div className="mb-8">
-              <h3 className="font-display font-bold text-[28px] text-ink">
-                Connexion
-              </h3>
-              <p className="mt-2 text-[14px] text-muted2">
-                Entrez vos identifiants pour accéder à la plateforme.
-              </p>
-              {error && <p className="mt-2 text-[14px] text-red-500 font-medium">{error}</p>}
-            </div>
-            <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
-              <div>
-                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Adresse Email</label>
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
-                  placeholder="jean@exemple.com"
-                />
-              </div>
+              <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
+                <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.18 }}>
+                  <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Adresse Email</label>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                    placeholder="jean@exemple.com"
+                  />
+                </motion.div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="mt-4 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-3.5 hover:bg-black transition-colors disabled:opacity-70"
-              >
-                {loading ? 'Chargement...' : 'Se Connecter'}
-              </button>
-            </form>
-          </>
-        )}
+                <motion.div initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.24 }}>
+                  <motion.button
+                    type="submit"
+                    disabled={loading}
+                    whileHover={{ scale: 1.02, boxShadow: "0 0 24px rgba(167,139,250,0.5)" }}
+                    whileTap={{ scale: 0.97 }}
+                    className="mt-2 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-3.5 hover:bg-black transition-colors disabled:opacity-70 relative overflow-hidden"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <motion.span
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                          className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                        />
+                        Traitement...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <Zap className="w-4 h-4 text-[#F3BA2F]" />
+                        Se Connecter
+                        <ArrowRight className="w-4 h-4" />
+                      </span>
+                    )}
+                    <motion.span
+                      initial={{ x: "-100%", skewX: -15 }}
+                      whileHover={{ x: "200%" }}
+                      transition={{ duration: 0.6 }}
+                      className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none"
+                    />
+                  </motion.button>
+                </motion.div>
+              </form>
+            </>
+          )}
+        </div>
       </motion.div>
     </motion.div>
   );
