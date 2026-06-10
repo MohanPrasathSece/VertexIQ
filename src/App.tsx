@@ -26,6 +26,7 @@ import {
   Database,
   RefreshCw,
   Download,
+  CheckCircle2,
 } from "lucide-react";
 import {
   motion,
@@ -1692,69 +1693,152 @@ function DemoTradingBot() {
   );
 }
 
-function ContactDatabaseForm() {
-  const rows = Array.from({ length: 8 });
+function ContactLeadForm() {
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitted(true);
+    setTimeout(() => setSubmitted(false), 4000);
+  };
+
   return (
-    <div className="rounded-[24px] bg-white border border-hair shadow-soft overflow-hidden w-full mt-12 mb-12">
-      <div className="bg-[#107C41] p-5 text-white flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Database className="w-6 h-6" />
-          <div>
-            <h3 className="font-display font-semibold text-[18px]">Base de données de contact</h3>
-            <div className="text-[12px] text-white/70">Mode Feuille de calcul Premium</div>
+    <div className="rounded-[24px] bg-white border border-hair shadow-soft overflow-hidden w-full mt-12 mb-12 relative">
+      {/* Decorative gradient blob */}
+      <div className="pointer-events-none absolute -top-20 -right-20 w-[300px] h-[300px] rounded-full bg-[#A78BFA]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 -left-20 w-[250px] h-[250px] rounded-full bg-[#F3BA2F]/10 blur-3xl" />
+
+      <div className="grid lg:grid-cols-5 relative z-10">
+        {/* Left Info Panel */}
+        <div className="lg:col-span-2 bg-gradient-to-br from-[#111827] to-[#1E293B] text-white p-8 sm:p-10 flex flex-col justify-center">
+          <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-white/50 mb-5">
+            <span className="size-1.5 rounded-full bg-[#A78BFA]" />
+            Contactez-nous
+          </div>
+          <h3 className="font-display font-bold text-[28px] leading-tight mb-4">
+            Une question ?<br />Parlons-en.
+          </h3>
+          <p className="text-[14px] leading-relaxed text-white/60 mb-8">
+            Notre équipe d'experts est disponible pour répondre à toutes vos questions concernant nos services, notre plateforme ou votre stratégie d'investissement.
+          </p>
+
+          <div className="space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
+                <Send className="size-4 text-[#A78BFA]" />
+              </div>
+              <div>
+                <div className="text-[13px] font-semibold">Email</div>
+                <div className="text-[12px] text-white/50">support@vertexiq.com</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
+                <Shield className="size-4 text-[#F3BA2F]" />
+              </div>
+              <div>
+                <div className="text-[13px] font-semibold">Support Premium</div>
+                <div className="text-[12px] text-white/50">Réponse sous 24h</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
+                <Activity className="size-4 text-[#22C55E]" />
+              </div>
+              <div>
+                <div className="text-[13px] font-semibold">Disponibilité</div>
+                <div className="text-[12px] text-white/50">Lun – Ven, 9h – 18h</div>
+              </div>
+            </div>
           </div>
         </div>
-        <a href="http://localhost:3001/api/database/download" download className="bg-white/20 hover:bg-white/30 text-white rounded-lg px-4 py-2 text-[13px] font-semibold transition-colors inline-flex items-center gap-2 shadow-sm">
-          <Download className="w-4 h-4" />
-          Télécharger .xlsx
-        </a>
-      </div>
-      <div className="p-2 bg-[#F3F2F1] overflow-x-auto">
-        <form className="min-w-[800px] bg-white border border-[#E1DFDD] text-[14px] shadow-sm" onSubmit={(e) => { e.preventDefault(); alert('Ligne enregistrée!'); }}>
-          {/* Headers */}
-          <div className="grid grid-cols-[50px_2fr_2fr_2fr_3fr_150px] bg-[#F3F2F1] border-b border-[#E1DFDD]">
-            <div className="border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[12px]"></div>
-            <div className="border-r border-[#E1DFDD] px-4 py-3 text-[#605E5C] font-semibold uppercase text-[12px] tracking-wider">A - Nom Complet</div>
-            <div className="border-r border-[#E1DFDD] px-4 py-3 text-[#605E5C] font-semibold uppercase text-[12px] tracking-wider">B - Adresse Email</div>
-            <div className="border-r border-[#E1DFDD] px-4 py-3 text-[#605E5C] font-semibold uppercase text-[12px] tracking-wider">C - Téléphone</div>
-            <div className="border-r border-[#E1DFDD] px-4 py-3 text-[#605E5C] font-semibold uppercase text-[12px] tracking-wider">D - Message</div>
-            <div className="px-4 py-3 text-[#605E5C] font-semibold uppercase text-[12px] tracking-wider text-center">Action</div>
-          </div>
-          
-          {/* Active Input Row */}
-          <div className="grid grid-cols-[50px_2fr_2fr_2fr_3fr_150px] border-b border-l-4 border-l-[#107C41] bg-[#F0F8F3]">
-            <div className="border-r border-[#E1DFDD] flex items-center justify-center text-[#107C41] font-bold text-[12px]">1</div>
-            <div className="border-r border-[#E1DFDD] p-0 relative">
-              <input type="text" placeholder="Entrez le nom..." required className="w-full h-full px-4 py-3 outline-none bg-transparent focus:bg-white focus:ring-2 focus:ring-[#107C41] focus:ring-inset relative z-10 transition-all" />
-            </div>
-            <div className="border-r border-[#E1DFDD] p-0 relative">
-              <input type="email" placeholder="Entrez l'email..." required className="w-full h-full px-4 py-3 outline-none bg-transparent focus:bg-white focus:ring-2 focus:ring-[#107C41] focus:ring-inset relative z-10 transition-all" />
-            </div>
-            <div className="border-r border-[#E1DFDD] p-0 relative">
-              <input type="tel" placeholder="Entrez le téléphone..." className="w-full h-full px-4 py-3 outline-none bg-transparent focus:bg-white focus:ring-2 focus:ring-[#107C41] focus:ring-inset relative z-10 transition-all" />
-            </div>
-            <div className="border-r border-[#E1DFDD] p-0 relative">
-              <input type="text" placeholder="Entrez le message..." required className="w-full h-full px-4 py-3 outline-none bg-transparent focus:bg-white focus:ring-2 focus:ring-[#107C41] focus:ring-inset relative z-10 transition-all" />
-            </div>
-            <div className="p-2 flex items-center justify-center">
-              <button type="submit" className="w-full flex items-center justify-center gap-2 bg-[#107C41] text-white py-2 rounded-md hover:bg-[#0C5E31] transition-colors font-medium text-[13px] shadow-sm">
-                <Send className="w-4 h-4" /> Sauvegarder
-              </button>
-            </div>
-          </div>
 
-          {/* Dummy Empty Rows */}
-          {rows.map((_, i) => (
-            <div key={i} className="grid grid-cols-[50px_2fr_2fr_2fr_3fr_150px] border-b border-[#E1DFDD] bg-white hover:bg-[#FAFAFA] transition-colors">
-              <div className="border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[12px] bg-[#F3F2F1]">{i + 2}</div>
-              <div className="border-r border-[#E1DFDD] px-4 py-3 text-ink/30 italic text-[13px]">Vide</div>
-              <div className="border-r border-[#E1DFDD] px-4 py-3 text-ink/30 italic text-[13px]">Vide</div>
-              <div className="border-r border-[#E1DFDD] px-4 py-3 text-ink/30 italic text-[13px]">Vide</div>
-              <div className="border-r border-[#E1DFDD] px-4 py-3 text-ink/30 italic text-[13px]">Vide</div>
-              <div className="p-2"></div>
-            </div>
-          ))}
-        </form>
+        {/* Right Form Panel */}
+        <div className="lg:col-span-3 p-8 sm:p-10">
+          {submitted ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center h-full text-center py-16"
+            >
+              <div className="size-16 rounded-full bg-[#0E7C4A]/10 flex items-center justify-center mb-5">
+                <CheckCircle2 className="size-8 text-[#0E7C4A]" />
+              </div>
+              <h4 className="font-display font-bold text-[22px] text-ink mb-2">Message envoyé !</h4>
+              <p className="text-[14px] text-muted2 max-w-sm">Merci pour votre message. Notre équipe vous répondra dans les plus brefs délais.</p>
+            </motion.div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <h3 className="font-display font-bold text-[22px] text-ink mb-1">Envoyez-nous un message</h3>
+                <p className="text-[13px] text-muted2">Remplissez le formulaire et nous reviendrons vers vous rapidement.</p>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-2">Nom complet</label>
+                  <input
+                    type="text"
+                    placeholder="Jean Dupont"
+                    required
+                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all placeholder:text-ink/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-2">Adresse email</label>
+                  <input
+                    type="email"
+                    placeholder="jean@exemple.com"
+                    required
+                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all placeholder:text-ink/30"
+                  />
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-2">Téléphone</label>
+                  <input
+                    type="tel"
+                    placeholder="+33 6 12 34 56 78"
+                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all placeholder:text-ink/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-2">Sujet</label>
+                  <select
+                    required
+                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all text-ink/70 cursor-pointer"
+                  >
+                    <option value="">Choisir un sujet...</option>
+                    <option value="general">Question générale</option>
+                    <option value="trading">Trading & Signaux</option>
+                    <option value="account">Mon compte</option>
+                    <option value="partnership">Partenariat</option>
+                    <option value="other">Autre</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-2">Votre message</label>
+                <textarea
+                  placeholder="Décrivez votre demande en détail..."
+                  required
+                  rows={5}
+                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all resize-none placeholder:text-ink/30"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white py-3.5 rounded-xl hover:from-[#9B7AEE] hover:to-[#6D28D9] transition-all font-semibold text-[15px] shadow-lg shadow-[#A78BFA]/20 cursor-pointer"
+              >
+                <Send className="w-4 h-4" /> Envoyer le message
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1844,9 +1928,9 @@ function Dashboard() {
         <DemoTradingBot />
       </FadeSection>
 
-      {/* BOTTOM SECTION: Big Excel Form */}
+      {/* BOTTOM SECTION: Contact Form */}
       <FadeSection>
-        <ContactDatabaseForm />
+        <ContactLeadForm />
       </FadeSection>
     </div>
   );
