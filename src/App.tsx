@@ -1675,6 +1675,23 @@ function AuthModal({ mode, onClose, onSwitchMode }: { mode: 'login' | 'signup', 
                     />
                   </motion.button>
                 </motion.div>
+
+                {/* Switch to login */}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.45 }}
+                  className="text-center text-[13px] text-muted2 mt-1"
+                >
+                  Vous avez déjà un compte ?{" "}
+                  <button
+                    type="button"
+                    onClick={() => onSwitchMode && onSwitchMode('login')}
+                    className="font-semibold text-[#A78BFA] hover:underline transition-all"
+                  >
+                    Se connecter
+                  </button>
+                </motion.p>
               </form>
             </>
           ) : (
@@ -1750,6 +1767,23 @@ function AuthModal({ mode, onClose, onSwitchMode }: { mode: 'login' | 'signup', 
                     />
                   </motion.button>
                 </motion.div>
+
+                {/* Switch to signup */}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.32 }}
+                  className="text-center text-[13px] text-muted2 mt-1"
+                >
+                  Pas encore de compte ?{" "}
+                  <button
+                    type="button"
+                    onClick={() => onSwitchMode && onSwitchMode('signup')}
+                    className="font-semibold text-[#A78BFA] hover:underline transition-all"
+                  >
+                    S'inscrire gratuitement
+                  </button>
+                </motion.p>
               </form>
             </>
           )}
