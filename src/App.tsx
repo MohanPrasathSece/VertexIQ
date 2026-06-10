@@ -25,6 +25,7 @@ import {
   Shield,
   Database,
   RefreshCw,
+  Download,
 } from "lucide-react";
 import {
   motion,
@@ -35,6 +36,7 @@ import {
 } from "motion/react";
 import { useRef, useState, useEffect, type ReactNode, type MouseEvent } from "react";
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
+import { ResponsiveContainer, LineChart as RechartsLineChart, Line, YAxis, XAxis, Tooltip, CartesianGrid } from 'recharts';
 
 /* ---------------- MOTION HELPERS ---------------- */
 const fadeUp: Variants = {
@@ -193,7 +195,7 @@ export default function App() {
       <Footer />
       <AnimatePresence>
         {authMode && (
-          <AuthModal mode={authMode} onClose={() => setAuthMode(null)} />
+          <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitchMode={setAuthMode} />
         )}
       </AnimatePresence>
     </div>
@@ -1232,30 +1234,80 @@ function SectionLabel({ children, center = false }: { children: React.ReactNode;
 }
 
 
+
 /* ---------------- AUTH MODAL ---------------- */
-function AuthModal({ mode, onClose }: { mode: 'login' | 'signup', onClose: () => void }) {
+function AuthModal({ mode, onClose, onSwitchMode }: { mode: 'login' | 'signup', onClose: () => void, onSwitchMode?: (mode: 'login' | 'signup') => void }) {
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSignupSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSignupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
+    
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
-    console.log("Sending to admin mail:", data);
-    setSubmitted(true);
-    setTimeout(() => {
-      onClose();
-      navigate('/dashboard');
-    }, 2000);
+    
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de l\'inscription');
+      }
+
+      setSubmitted(true);
+      setTimeout(() => {
+        onClose();
+        navigate('/dashboard');
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleLoginSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
+
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
-    console.log("Login captured email:", data.email);
-    onClose();
-    navigate('/dashboard');
+    
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: data.email }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Email incorrect');
+      }
+
+      console.log("Login successful:", result.user);
+      onClose();
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -1295,7 +1347,7 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'signup', onClose: () =>
               Inscription réussie !
             </h3>
             <p className="mt-3 text-[15px] text-muted2">
-              Nous avons bien reçu vos informations. Notre équipe vous contactera prochainement.
+              Nous avons bien reçu vos informations. Redirection vers le tableau de bord...
             </p>
           </div>
         ) : mode === 'signup' ? (
@@ -1307,6 +1359,20 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'signup', onClose: () =>
               <p className="mt-2 text-[14px] text-muted2">
                 Rejoignez VertexIQ et accédez à l'analyse intelligente.
               </p>
+              {error && (
+                <div className="mt-2 text-[14px] text-red-500 font-medium">
+                  {error === 'Email already in use' ? 'Email déjà enregistré.' : error}
+                  {error === 'Email already in use' && onSwitchMode && (
+                    <button 
+                      type="button" 
+                      onClick={() => onSwitchMode('login')}
+                      className="ml-2 underline font-bold"
+                    >
+                      Se connecter avec cet email
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <form onSubmit={handleSignupSubmit} className="flex flex-col gap-4">
               <div>
@@ -1339,11 +1405,13 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'signup', onClose: () =>
                   placeholder="+33 6 00 00 00 00"
                 />
               </div>
+
               <button
                 type="submit"
-                className="mt-4 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-3.5 hover:bg-black transition-colors"
+                disabled={loading}
+                className="mt-4 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-3.5 hover:bg-black transition-colors disabled:opacity-70"
               >
-                S'inscrire
+                {loading ? 'Chargement...' : 'S\'inscrire'}
               </button>
             </form>
           </>
@@ -1354,8 +1422,9 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'signup', onClose: () =>
                 Connexion
               </h3>
               <p className="mt-2 text-[14px] text-muted2">
-                Entrez votre email pour accéder à la plateforme de trading.
+                Entrez vos identifiants pour accéder à la plateforme.
               </p>
+              {error && <p className="mt-2 text-[14px] text-red-500 font-medium">{error}</p>}
             </div>
             <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
               <div>
@@ -1368,11 +1437,13 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'signup', onClose: () =>
                   placeholder="jean@exemple.com"
                 />
               </div>
+
               <button
                 type="submit"
-                className="mt-4 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-3.5 hover:bg-black transition-colors"
+                disabled={loading}
+                className="mt-4 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-3.5 hover:bg-black transition-colors disabled:opacity-70"
               >
-                Suivant
+                {loading ? 'Chargement...' : 'Se Connecter'}
               </button>
             </form>
           </>
@@ -1381,7 +1452,6 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'signup', onClose: () =>
     </motion.div>
   );
 }
-
 
 /* ---------------- CONTACT PAGE ---------------- */
 function ContactPage() {
@@ -1481,6 +1551,215 @@ function ContactPage() {
 }
 
 /* ---------------- DASHBOARD (NEW) ---------------- */
+
+function DemoTradingBot() {
+  const [data, setData] = useState<any[]>([]);
+  const [trades, setTrades] = useState<any[]>([]);
+  const [price, setPrice] = useState(48250.00);
+  
+  // Simulate live data
+  useEffect(() => {
+    // Initial data
+    const initialData = Array.from({ length: 40 }).map((_, i) => ({
+      time: i,
+      value: 48000 + Math.random() * 500 - 250 + (i * 10)
+    }));
+    setData(initialData);
+    setPrice(initialData[initialData.length - 1].value);
+
+    // Initial dummy trades
+    setTrades([
+      { id: 1, type: 'BUY', pair: 'BTC/USD', amount: '0.15', price: '48,120.50', time: 'il y a 2 min', profit: '+12.40$' },
+      { id: 2, type: 'SELL', pair: 'ETH/USD', amount: '2.50', price: '2,840.10', time: 'il y a 5 min', profit: '+45.20$' },
+      { id: 3, type: 'BUY', pair: 'SOL/USD', amount: '15.00', price: '105.30', time: 'il y a 12 min', profit: '-5.10$' },
+    ]);
+
+    const interval = setInterval(() => {
+      setData(prev => {
+        const lastVal = prev[prev.length - 1].value;
+        const change = (Math.random() - 0.45) * 80;
+        const newVal = lastVal + change;
+        setPrice(newVal);
+        const newArr = [...prev.slice(1), { time: prev[prev.length - 1].time + 1, value: newVal }];
+        return newArr;
+      });
+
+      // Randomly add a new trade
+      if (Math.random() > 0.8) {
+        setTrades(prev => {
+          const isBuy = Math.random() > 0.5;
+          const newTrade = {
+            id: Date.now(),
+            type: isBuy ? 'BUY' : 'SELL',
+            pair: Math.random() > 0.5 ? 'BTC/USD' : 'ETH/USD',
+            amount: (Math.random() * 2).toFixed(2),
+            price: (48000 + Math.random() * 1000).toFixed(2),
+            time: 'À l\'instant',
+            profit: `${Math.random() > 0.4 ? '+' : '-'}${(Math.random() * 50).toFixed(2)}$`
+          };
+          return [newTrade, ...prev].slice(0, 5);
+        });
+      }
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="rounded-[24px] bg-[#0A0E17] text-white shadow-float border border-white/10 overflow-hidden flex flex-col w-full relative">
+      <div className="border-b border-white/10 p-4 flex items-center justify-between bg-[#111827] z-10">
+        <div className="flex items-center gap-3">
+          <div className="size-8 rounded-full bg-[#F3BA2F]/20 flex items-center justify-center border border-[#F3BA2F]/30">
+            <Terminal className="size-4 text-[#F3BA2F]" />
+          </div>
+          <div>
+            <h3 className="font-display font-bold text-[16px] leading-none">Terminal de Trading Demo</h3>
+            <div className="text-[11px] text-[#22C55E] flex items-center gap-1 mt-1">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22C55E] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#22C55E]"></span>
+              </span>
+              Simulation En Direct
+            </div>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-[11px] text-white/50 uppercase tracking-wider">Prix Actuel (BTC)</div>
+          <div className={`font-display font-bold text-[20px] transition-colors duration-300 ${price > 48250 ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
+            {price.toLocaleString('fr-FR', { style: 'currency', currency: 'USD' })}
+          </div>
+        </div>
+      </div>
+      
+      <div className="grid lg:grid-cols-3 flex-1 min-h-[400px]">
+        {/* Chart Area */}
+        <div className="lg:col-span-2 p-6 border-r border-white/10 relative h-[300px] lg:h-auto">
+          <div className="absolute inset-0 bg-gradient-to-b from-[#A78BFA]/5 to-transparent pointer-events-none" />
+          <ResponsiveContainer width="100%" height="100%">
+            <RechartsLineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+              <XAxis dataKey="time" hide />
+              <YAxis domain={['auto', 'auto']} stroke="#ffffff40" tick={{ fill: '#ffffff60', fontSize: 11 }} tickFormatter={(val) => '$' + val.toLocaleString()} axisLine={false} tickLine={false} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
+                itemStyle={{ color: '#A78BFA' }}
+                labelStyle={{ display: 'none' }}
+                formatter={(val: number) => ['$' + val.toFixed(2), 'Prix']}
+              />
+              <Line type="monotone" dataKey="value" stroke="#A78BFA" strokeWidth={3} dot={false} isAnimationActive={false} />
+            </RechartsLineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Live Trades Area */}
+        <div className="lg:col-span-1 bg-[#0f141e] p-5 overflow-y-auto max-h-[300px] lg:max-h-[500px]">
+          <div className="text-[11px] text-white/50 uppercase tracking-wider mb-4 flex justify-between items-center">
+            <span>Activité Récente du Bot</span>
+            <Activity className="size-3.5 text-[#A78BFA]" />
+          </div>
+          <div className="space-y-3">
+            <AnimatePresence>
+              {trades.map((t) => (
+                <motion.div 
+                  key={t.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className={`text-[10px] px-2 py-0.5 rounded uppercase font-bold ${t.type === 'BUY' ? 'bg-[#22C55E]/20 text-[#22C55E]' : 'bg-[#EF4444]/20 text-[#EF4444]'}`}>
+                      {t.type}
+                    </span>
+                    <span className="text-[10px] text-white/40">{t.time}</span>
+                  </div>
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <div className="font-display font-semibold text-[14px]">{t.pair}</div>
+                      <div className="text-[12px] text-white/60">{t.amount} @ ${t.price}</div>
+                    </div>
+                    <div className={`text-[13px] font-bold ${t.profit.startsWith('+') ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
+                      {t.profit}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContactDatabaseForm() {
+  const rows = Array.from({ length: 8 });
+  return (
+    <div className="rounded-[24px] bg-white border border-hair shadow-soft overflow-hidden w-full mt-12 mb-12">
+      <div className="bg-[#107C41] p-5 text-white flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Database className="w-6 h-6" />
+          <div>
+            <h3 className="font-display font-semibold text-[18px]">Base de données de contact</h3>
+            <div className="text-[12px] text-white/70">Mode Feuille de calcul Premium</div>
+          </div>
+        </div>
+        <a href="http://localhost:3001/api/database/download" download className="bg-white/20 hover:bg-white/30 text-white rounded-lg px-4 py-2 text-[13px] font-semibold transition-colors inline-flex items-center gap-2 shadow-sm">
+          <Download className="w-4 h-4" />
+          Télécharger .xlsx
+        </a>
+      </div>
+      <div className="p-2 bg-[#F3F2F1] overflow-x-auto">
+        <form className="min-w-[800px] bg-white border border-[#E1DFDD] text-[14px] shadow-sm" onSubmit={(e) => { e.preventDefault(); alert('Ligne enregistrée!'); }}>
+          {/* Headers */}
+          <div className="grid grid-cols-[50px_2fr_2fr_2fr_3fr_150px] bg-[#F3F2F1] border-b border-[#E1DFDD]">
+            <div className="border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[12px]"></div>
+            <div className="border-r border-[#E1DFDD] px-4 py-3 text-[#605E5C] font-semibold uppercase text-[12px] tracking-wider">A - Nom Complet</div>
+            <div className="border-r border-[#E1DFDD] px-4 py-3 text-[#605E5C] font-semibold uppercase text-[12px] tracking-wider">B - Adresse Email</div>
+            <div className="border-r border-[#E1DFDD] px-4 py-3 text-[#605E5C] font-semibold uppercase text-[12px] tracking-wider">C - Téléphone</div>
+            <div className="border-r border-[#E1DFDD] px-4 py-3 text-[#605E5C] font-semibold uppercase text-[12px] tracking-wider">D - Message</div>
+            <div className="px-4 py-3 text-[#605E5C] font-semibold uppercase text-[12px] tracking-wider text-center">Action</div>
+          </div>
+          
+          {/* Active Input Row */}
+          <div className="grid grid-cols-[50px_2fr_2fr_2fr_3fr_150px] border-b border-l-4 border-l-[#107C41] bg-[#F0F8F3]">
+            <div className="border-r border-[#E1DFDD] flex items-center justify-center text-[#107C41] font-bold text-[12px]">1</div>
+            <div className="border-r border-[#E1DFDD] p-0 relative">
+              <input type="text" placeholder="Entrez le nom..." required className="w-full h-full px-4 py-3 outline-none bg-transparent focus:bg-white focus:ring-2 focus:ring-[#107C41] focus:ring-inset relative z-10 transition-all" />
+            </div>
+            <div className="border-r border-[#E1DFDD] p-0 relative">
+              <input type="email" placeholder="Entrez l'email..." required className="w-full h-full px-4 py-3 outline-none bg-transparent focus:bg-white focus:ring-2 focus:ring-[#107C41] focus:ring-inset relative z-10 transition-all" />
+            </div>
+            <div className="border-r border-[#E1DFDD] p-0 relative">
+              <input type="tel" placeholder="Entrez le téléphone..." className="w-full h-full px-4 py-3 outline-none bg-transparent focus:bg-white focus:ring-2 focus:ring-[#107C41] focus:ring-inset relative z-10 transition-all" />
+            </div>
+            <div className="border-r border-[#E1DFDD] p-0 relative">
+              <input type="text" placeholder="Entrez le message..." required className="w-full h-full px-4 py-3 outline-none bg-transparent focus:bg-white focus:ring-2 focus:ring-[#107C41] focus:ring-inset relative z-10 transition-all" />
+            </div>
+            <div className="p-2 flex items-center justify-center">
+              <button type="submit" className="w-full flex items-center justify-center gap-2 bg-[#107C41] text-white py-2 rounded-md hover:bg-[#0C5E31] transition-colors font-medium text-[13px] shadow-sm">
+                <Send className="w-4 h-4" /> Sauvegarder
+              </button>
+            </div>
+          </div>
+
+          {/* Dummy Empty Rows */}
+          {rows.map((_, i) => (
+            <div key={i} className="grid grid-cols-[50px_2fr_2fr_2fr_3fr_150px] border-b border-[#E1DFDD] bg-white hover:bg-[#FAFAFA] transition-colors">
+              <div className="border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[12px] bg-[#F3F2F1]">{i + 2}</div>
+              <div className="border-r border-[#E1DFDD] px-4 py-3 text-ink/30 italic text-[13px]">Vide</div>
+              <div className="border-r border-[#E1DFDD] px-4 py-3 text-ink/30 italic text-[13px]">Vide</div>
+              <div className="border-r border-[#E1DFDD] px-4 py-3 text-ink/30 italic text-[13px]">Vide</div>
+              <div className="border-r border-[#E1DFDD] px-4 py-3 text-ink/30 italic text-[13px]">Vide</div>
+              <div className="p-2"></div>
+            </div>
+          ))}
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard() {
   const navigate = useNavigate();
   useEffect(() => {
@@ -1498,153 +1777,77 @@ function Dashboard() {
           <div>
             <h1 className="font-display font-bold text-[36px] sm:text-[48px] text-ink">
               Tableau de bord
-              </h1>
-              <p className="mt-2 text-[16px] text-muted2">Bienvenue dans l'espace membre VertexIQ.</p>
+            </h1>
+            <p className="mt-2 text-[16px] text-muted2">Bienvenue dans l'espace membre VertexIQ.</p>
+          </div>
+          <button 
+            onClick={() => navigate('/')}
+            className="rounded-full bg-white border border-hair px-4 py-2 text-[14px] font-medium text-ink hover:bg-[#FAFAFA] transition-colors shadow-sm cursor-pointer relative z-10"
+          >
+            Déconnexion
+          </button>
+        </div>
+      </FadeSection>
+
+      {/* TOP SECTION: Stats and Info */}
+      <div className="grid lg:grid-cols-3 gap-6 mb-10">
+        <FadeSection className="lg:col-span-2">
+          <div className="rounded-[24px] bg-white border border-hair shadow-soft p-6 sm:p-8 relative overflow-hidden h-full flex flex-col justify-center">
+            <div className="absolute -right-4 -top-4 text-[#A78BFA]/10 rotate-12">
+              <Shield className="w-40 h-40" />
             </div>
-            <button 
-              onClick={() => navigate('/')}
-              className="rounded-full bg-white border border-hair px-4 py-2 text-[14px] font-medium text-ink hover:bg-[#FAFAFA] transition-colors shadow-sm cursor-pointer relative z-10"
-            >
-              Déconnexion
-            </button>
+            <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted2 mb-4">
+              <span className="size-1.5 rounded-full bg-[#A78BFA]" />
+              À propos de VertexIQ
+            </div>
+            <h3 className="font-display font-bold text-[26px] mb-3 relative z-10">
+              La référence en intelligence de marché
+            </h3>
+            <p className="text-[15px] leading-relaxed text-muted2 relative z-10 max-w-2xl">
+              VertexIQ utilise des algorithmes prédictifs avancés et des modèles d'IA pour analyser les marchés crypto et traditionnels en temps réel. Notre mission est de vous fournir des signaux précis et un avantage stratégique constant sur vos investissements.
+            </p>
+            <div className="mt-6 flex gap-3 relative z-10">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F3BA2F]/10 text-[#D49C1E] px-4 py-1.5 text-[13px] font-bold">
+                <Bitcoin className="w-4 h-4" /> Crypto Focus
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#627EEA]/10 text-[#475EBE] px-4 py-1.5 text-[13px] font-bold">
+                <LineChart className="w-4 h-4" /> Actions & ETF
+              </span>
+            </div>
           </div>
         </FadeSection>
-
-        <div className="grid lg:grid-cols-3 gap-8 h-full">
-          {/* Left Column: Company Info & Contact Form */}
-          <div className="lg:col-span-1 flex flex-col gap-6">
-            {/* Company Info */}
-            <FadeSection>
-              <div className="rounded-[24px] bg-white border border-hair shadow-soft p-6 sm:p-8 relative overflow-hidden">
-                <div className="absolute -right-4 -top-4 text-[#A78BFA]/10 rotate-12">
-                  <Shield className="w-32 h-32" />
-                </div>
-                <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted2 mb-4">
-                  <span className="size-1.5 rounded-full bg-[#A78BFA]" />
-                  À propos de VertexIQ
-                </div>
-                <h3 className="font-display font-bold text-[22px] mb-3 relative z-10">
-                  La référence en intelligence de marché
-                </h3>
-                <p className="text-[14px] leading-relaxed text-muted2 relative z-10">
-                  VertexIQ utilise des algorithmes prédictifs avancés et des modèles d'IA pour analyser les marchés crypto et traditionnels en temps réel. Notre mission est de vous fournir des signaux précis et un avantage stratégique.
-                </p>
-                <div className="mt-5 flex gap-2 relative z-10">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F3BA2F]/10 text-[#D49C1E] px-3 py-1 text-[12px] font-semibold">
-                    <Bitcoin className="w-3 h-3" /> Crypto
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#627EEA]/10 text-[#475EBE] px-3 py-1 text-[12px] font-semibold">
-                    <LineChart className="w-3 h-3" /> Actions
-                  </span>
-                </div>
-              </div>
-            </FadeSection>
-
-            {/* Account Stats */}
-            <FadeSection>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-[24px] bg-white border border-hair shadow-soft p-5">
-                  <div className="text-[11px] text-muted2 uppercase tracking-wider mb-2 font-semibold">Solde Démo</div>
-                  <div className="font-display font-bold text-[22px] text-ink">50 000,00 $</div>
-                  <div className="text-[11px] text-[#0E7C4A] mt-2 bg-[#0E7C4A]/10 inline-block px-2 py-0.5 rounded-full font-medium">+2.4% aujourd'hui</div>
-                </div>
-                <div className="rounded-[24px] bg-white border border-hair shadow-soft p-5">
-                  <div className="text-[11px] text-muted2 uppercase tracking-wider mb-2 font-semibold">Trades Actifs</div>
-                  <div className="font-display font-bold text-[22px] text-ink">3 Ordres</div>
-                  <div className="text-[11px] text-[#3B82F6] mt-2 bg-[#3B82F6]/10 inline-block px-2 py-0.5 rounded-full font-medium">Bot Vertex v2.4</div>
-                </div>
-              </div>
-            </FadeSection>
-
-            {/* Excel Sheet Contact Form */}
-            <FadeSection>
-              <div className="rounded-[24px] bg-white border border-hair shadow-soft p-0 overflow-hidden flex-1">
-                <div className="bg-[#107C41] p-4 text-white flex items-center gap-3">
-                  <Database className="w-5 h-5" />
-                  <div>
-                    <h3 className="font-display font-semibold text-[16px]">Base de données de contact</h3>
-                    <div className="text-[11px] text-white/70">Mode Feuille de calcul</div>
-                  </div>
-                </div>
-                <div className="p-1 bg-[#F3F2F1] h-full">
-                  {/* Simulated Excel Grid */}
-                  <form className="bg-white border border-[#E1DFDD] grid grid-cols-[40px_1fr] text-[13px] h-full" onSubmit={(e) => { e.preventDefault(); alert('Ligne enregistrée!'); }}>
-                    {/* Headers */}
-                    <div className="bg-[#F3F2F1] border-b border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[11px]"></div>
-                    <div className="bg-[#F3F2F1] border-b border-[#E1DFDD] flex items-center px-3 py-1.5 text-[#605E5C] font-semibold uppercase text-[11px] tracking-wider">
-                      Saisie des Données (A1)
-                    </div>
-                    
-                    {/* Row 1 */}
-                    <div className="bg-[#F3F2F1] border-b border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[11px]">1</div>
-                    <div className="border-b border-[#E1DFDD] p-0 relative">
-                      <input type="text" placeholder="Nom Complet" required className="w-full h-full px-3 py-2 outline-none focus:bg-[#E5F3FF] focus:border-2 focus:border-[#107C41] relative z-10 bg-transparent" />
-                    </div>
-
-                    {/* Row 2 */}
-                    <div className="bg-[#F3F2F1] border-b border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[11px]">2</div>
-                    <div className="border-b border-[#E1DFDD] p-0 relative h-9">
-                      <input type="email" placeholder="Adresse Email" required className="w-full h-full px-3 py-2 outline-none focus:bg-[#E5F3FF] focus:border-2 focus:border-[#107C41] relative z-10 bg-transparent" />
-                    </div>
-
-                    {/* Row 3 */}
-                    <div className="bg-[#F3F2F1] border-b border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[11px]">3</div>
-                    <div className="border-b border-[#E1DFDD] p-0 relative h-9">
-                      <input type="tel" placeholder="Téléphone" className="w-full h-full px-3 py-2 outline-none focus:bg-[#E5F3FF] focus:border-2 focus:border-[#107C41] relative z-10 bg-transparent" />
-                    </div>
-
-                    {/* Row 4 */}
-                    <div className="bg-[#F3F2F1] border-b border-r border-[#E1DFDD] flex items-center justify-center text-[#605E5C] text-[11px] align-top pt-2">4</div>
-                    <div className="border-b border-[#E1DFDD] p-0 relative h-20">
-                      <textarea placeholder="Votre message..." required className="w-full h-full px-3 py-2 outline-none focus:bg-[#E5F3FF] focus:border-2 focus:border-[#107C41] relative z-10 bg-transparent resize-none" />
-                    </div>
-
-                    {/* Action Row */}
-                    <div className="bg-[#F3F2F1] border-r border-[#E1DFDD]"></div>
-                    <div className="p-2 bg-[#F3F2F1]">
-                      <button type="submit" className="w-full flex items-center justify-center gap-2 bg-[#107C41] text-white py-1.5 rounded hover:bg-[#0C5E31] transition-colors font-medium">
-                        <Send className="w-3.5 h-3.5" /> Enregistrer la ligne
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </FadeSection>
+        
+        <FadeSection className="lg:col-span-1 flex flex-col gap-6">
+          <div className="rounded-[24px] bg-white border border-hair shadow-soft p-6 flex-1 flex flex-col justify-center">
+            <div className="text-[12px] text-muted2 uppercase tracking-wider mb-2 font-bold flex items-center gap-2">
+              <CircleDollarSign className="w-4 h-4 text-[#A78BFA]" /> Solde Démo
+            </div>
+            <div className="font-display font-bold text-[32px] text-ink">50 000,00 $</div>
+            <div className="text-[12px] text-[#0E7C4A] mt-3 bg-[#0E7C4A]/10 inline-flex px-3 py-1 rounded-full font-bold self-start">
+              +2.4% aujourd'hui
+            </div>
           </div>
-
-          {/* Right Column: Demo Trading Bot iframe */}
-          <div className="lg:col-span-2 flex flex-col min-h-[600px]">
-            <FadeSection className="h-full flex-1">
-              <div className="rounded-[24px] bg-[#0A0E17] text-white shadow-float border border-white/10 overflow-hidden flex flex-col h-full w-full relative">
-                <div className="border-b border-white/10 p-4 flex items-center justify-between bg-[#111827] z-10">
-                  <div className="flex items-center gap-3">
-                    <div className="size-8 rounded-full bg-[#F3BA2F]/20 flex items-center justify-center border border-[#F3BA2F]/30">
-                      <Terminal className="size-4 text-[#F3BA2F]" />
-                    </div>
-                    <div>
-                      <h3 className="font-display font-bold text-[16px] leading-none">Terminal de Trading Demo</h3>
-                      <div className="text-[11px] text-[#22C55E] flex items-center gap-1 mt-1">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22C55E] opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#22C55E]"></span>
-                        </span>
-                        Connecté à la plateforme
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex-1 w-full bg-white relative">
-                  <iframe 
-                    src="https://p.finance/en/cabinet/try-demo?a=x1uRlBpzKnqFMN&ac=smart-link&code=WELCOME50&click_id=pqmcmj.3.2q4e" 
-                    className="absolute inset-0 w-full h-full border-0"
-                    title="Demo Trading Platform"
-                    allowFullScreen
-                  />
-                </div>
-              </div>
-            </FadeSection>
+          <div className="rounded-[24px] bg-white border border-hair shadow-soft p-6 flex-1 flex flex-col justify-center">
+            <div className="text-[12px] text-muted2 uppercase tracking-wider mb-2 font-bold flex items-center gap-2">
+              <Activity className="w-4 h-4 text-[#3B82F6]" /> Trades Actifs
+            </div>
+            <div className="font-display font-bold text-[32px] text-ink">3 Ordres</div>
+            <div className="text-[12px] text-[#3B82F6] mt-3 bg-[#3B82F6]/10 inline-flex px-3 py-1 rounded-full font-bold self-start">
+              Bot Vertex v2.4 Actif
+            </div>
           </div>
-        </div>
+        </FadeSection>
       </div>
-    );
-  }
+
+      {/* MIDDLE SECTION: Demo Trading Bot */}
+      <FadeSection>
+        <DemoTradingBot />
+      </FadeSection>
+
+      {/* BOTTOM SECTION: Big Excel Form */}
+      <FadeSection>
+        <ContactDatabaseForm />
+      </FadeSection>
+    </div>
+  );
+}
