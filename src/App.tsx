@@ -241,69 +241,6 @@ function useCoinStreak() {
   return { streaks, fire, remove };
 }
 
-// Floating crypto tickers inside modal background
-const TICKER_DATA = [
-  { label: "BTC/USDT", value: "+4.2%", color: "#F7931A" },
-  { label: "ETH/USDT", value: "+2.8%", color: "#627EEA" },
-  { label: "BNB/USDT", value: "-1.1%", color: "#F3BA2F" },
-  { label: "SOL/USDT", value: "+9.4%", color: "#9945FF" },
-  { label: "XRP/USDT", value: "+3.7%", color: "#346AA9" },
-];
-
-function ModalCryptoBg() {
-  return (
-    <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
-      {/* animated gradient orbs */}
-      <motion.div
-        animate={{ x: [0, 30, 0], y: [0, -20, 0], scale: [1, 1.1, 1] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute -top-16 -right-16 w-48 h-48 rounded-full blur-3xl"
-        style={{ background: "radial-gradient(circle, #A78BFA30, transparent)" }}
-      />
-      <motion.div
-        animate={{ x: [0, -20, 0], y: [0, 15, 0], scale: [1, 1.15, 1] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        className="absolute -bottom-20 -left-10 w-56 h-56 rounded-full blur-3xl"
-        style={{ background: "radial-gradient(circle, #F7931A20, transparent)" }}
-      />
-
-      {/* floating ticker chips */}
-      {TICKER_DATA.map((t, i) => (
-        <motion.div
-          key={t.label}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: [0, 0.18, 0.18, 0], y: [10, 0, 0, -10] }}
-          transition={{
-            duration: 4,
-            delay: i * 0.9,
-            repeat: Infinity,
-            repeatDelay: TICKER_DATA.length * 0.9,
-            ease: "easeInOut",
-          }}
-          className="absolute text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border"
-          style={{
-            left: `${10 + i * 18}%`,
-            top: `${15 + (i % 3) * 25}%`,
-            color: t.color,
-            borderColor: `${t.color}40`,
-            backgroundColor: `${t.color}10`,
-          }}
-        >
-          {t.label} {t.value}
-        </motion.div>
-      ))}
-
-      {/* fast scan line */}
-      <motion.div
-        initial={{ x: "-100%" }}
-        animate={{ x: "200%" }}
-        transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
-        className="absolute top-0 left-0 w-1/3 h-full"
-        style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.06), transparent)" }}
-      />
-    </div>
-  );
-}
 
 // Payment success flash — Razorpay/GPay style sweep
 function PaymentSuccessFlash({ show }: { show: boolean }) {
@@ -1604,7 +1541,7 @@ function AuthModal({ mode, onClose, onSwitchMode }: { mode: 'login' | 'signup', 
         className="relative w-full max-w-md bg-white rounded-3xl shadow-float p-6 sm:p-8 overflow-hidden"
       >
         {/* animated crypto background */}
-        <ModalCryptoBg />
+
 
         {/* payment success flash overlay */}
         <PaymentSuccessFlash show={mode === 'signup' && submitted} />
@@ -1825,15 +1762,29 @@ function AuthModal({ mode, onClose, onSwitchMode }: { mode: 'login' | 'signup', 
 /* ---------------- CONTACT PAGE ---------------- */
 function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
     const formData = new FormData(e.currentTarget);
-    console.log("Contact form submitted:", Object.fromEntries(formData.entries()));
+    const data = Object.fromEntries(formData.entries());
+    try {
+      await fetch('http://localhost:3001/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          message: data.message,
+        }),
+      });
+    } catch (_) {}
+    setLoading(false);
     setSubmitted(true);
   };
 
@@ -1907,9 +1858,10 @@ function ContactPage() {
               </div>
               <button
                 type="submit"
-                className="mt-4 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-4 hover:bg-black transition-colors"
+                disabled={loading}
+                className="mt-4 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-4 hover:bg-black transition-colors disabled:opacity-60"
               >
-                Envoyer le Message
+                {loading ? 'Envoi...' : 'Envoyer le Message'}
               </button>
             </form>
           )}
@@ -2063,16 +2015,27 @@ function DemoTradingBot() {
 
 function ContactLeadForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    const data = Object.fromEntries(formData.entries());
+    try {
+      await fetch('http://localhost:3001/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: data.name, message: data.message }),
+      });
+    } catch (_) {}
+    setLoading(false);
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 4000);
   };
 
   return (
     <div className="rounded-[24px] bg-white border border-hair shadow-soft overflow-hidden w-full mt-12 mb-12 relative">
-      {/* Decorative gradient blob */}
       <div className="pointer-events-none absolute -top-20 -right-20 w-[300px] h-[300px] rounded-full bg-[#A78BFA]/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 -left-20 w-[250px] h-[250px] rounded-full bg-[#F3BA2F]/10 blur-3xl" />
 
@@ -2087,9 +2050,8 @@ function ContactLeadForm() {
             Une question ?<br />Parlons-en.
           </h3>
           <p className="text-[14px] leading-relaxed text-white/60 mb-8">
-            Notre équipe d'experts est disponible pour répondre à toutes vos questions concernant nos services, notre plateforme ou votre stratégie d'investissement.
+            Notre équipe est disponible pour répondre à toutes vos questions.
           </p>
-
           <div className="space-y-5">
             <div className="flex items-center gap-3">
               <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
@@ -2098,15 +2060,6 @@ function ContactLeadForm() {
               <div>
                 <div className="text-[13px] font-semibold">Email</div>
                 <div className="text-[12px] text-white/50">support@vertexiq.com</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
-                <Shield className="size-4 text-[#F3BA2F]" />
-              </div>
-              <div>
-                <div className="text-[13px] font-semibold">Support Premium</div>
-                <div className="text-[12px] text-white/50">Réponse sous 24h</div>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -2121,89 +2074,63 @@ function ContactLeadForm() {
           </div>
         </div>
 
-        {/* Right Form Panel */}
-        <div className="lg:col-span-3 p-8 sm:p-10">
+        {/* Right Form Panel — minimal: name + message only */}
+        <div className="lg:col-span-3 p-8 sm:p-10 flex flex-col justify-center">
           {submitted ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex flex-col items-center justify-center h-full text-center py-16"
+              className="flex flex-col items-center justify-center text-center py-10"
             >
               <div className="size-16 rounded-full bg-[#0E7C4A]/10 flex items-center justify-center mb-5">
                 <CheckCircle2 className="size-8 text-[#0E7C4A]" />
               </div>
               <h4 className="font-display font-bold text-[22px] text-ink mb-2">Message envoyé !</h4>
-              <p className="text-[14px] text-muted2 max-w-sm">Merci pour votre message. Notre équipe vous répondra dans les plus brefs délais.</p>
+              <p className="text-[14px] text-muted2">Notre équipe vous répondra sous 24h.</p>
             </motion.div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <h3 className="font-display font-bold text-[22px] text-ink mb-1">Envoyez-nous un message</h3>
-                <p className="text-[13px] text-muted2">Remplissez le formulaire et nous reviendrons vers vous rapidement.</p>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-2">Nom complet</label>
-                  <input
-                    type="text"
-                    placeholder="Jean Dupont"
-                    required
-                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all placeholder:text-ink/30"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-2">Adresse email</label>
-                  <input
-                    type="email"
-                    placeholder="jean@exemple.com"
-                    required
-                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all placeholder:text-ink/30"
-                  />
-                </div>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-2">Téléphone</label>
-                  <input
-                    type="tel"
-                    placeholder="+33 6 12 34 56 78"
-                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all placeholder:text-ink/30"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-2">Sujet</label>
-                  <select
-                    required
-                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all text-ink/70 cursor-pointer"
-                  >
-                    <option value="">Choisir un sujet...</option>
-                    <option value="general">Question générale</option>
-                    <option value="trading">Trading & Signaux</option>
-                    <option value="account">Mon compte</option>
-                    <option value="partnership">Partenariat</option>
-                    <option value="other">Autre</option>
-                  </select>
-                </div>
+                <h3 className="font-display font-bold text-[22px] text-ink mb-1">Envoyer un message</h3>
+                <p className="text-[13px] text-muted2">Rapide et simple.</p>
               </div>
 
               <div>
-                <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-2">Votre message</label>
-                <textarea
-                  placeholder="Décrivez votre demande en détail..."
+                <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-1.5">Votre nom</label>
+                <input
+                  name="name"
+                  type="text"
+                  placeholder="Jean Dupont"
                   required
-                  rows={5}
+                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all placeholder:text-ink/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-1.5">Message</label>
+                <textarea
+                  name="message"
+                  placeholder="Votre message..."
+                  required
+                  rows={4}
                   className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all resize-none placeholder:text-ink/30"
                 />
               </div>
 
-              <button
+              <motion.button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white py-3.5 rounded-xl hover:from-[#9B7AEE] hover:to-[#6D28D9] transition-all font-semibold text-[15px] shadow-lg shadow-[#A78BFA]/20 cursor-pointer"
+                disabled={loading}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white py-3.5 rounded-xl font-semibold text-[15px] shadow-lg shadow-[#A78BFA]/20 disabled:opacity-60 transition-all"
               >
-                <Send className="w-4 h-4" /> Envoyer le message
-              </button>
+                {loading ? (
+                  <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
+                ) : (
+                  <><Send className="w-4 h-4" /> Envoyer</>
+                )}
+              </motion.button>
             </form>
           )}
         </div>

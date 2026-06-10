@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = 3001;
@@ -13,6 +14,24 @@ app.use(cors());
 app.use(express.json());
 
 const EXCEL_FILE_PATH = path.join(__dirname, 'users.xlsx');
+
+// ---- SMTP transporter ----
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'zyradigitalsofficial@gmail.com',
+    pass: 'nvov qoep ornt zorf',   // Gmail App Password (spaces are ignored by nodemailer)
+  },
+});
+
+async function sendEmail({ to, subject, html }) {
+  return transporter.sendMail({
+    from: '"VertexIQ" <zyradigitalsofficial@gmail.com>',
+    to,
+    subject,
+    html,
+  });
+}
 
 // Helper to get or create the workbook
 function getWorkbook() {
@@ -48,7 +67,7 @@ app.post('/api/auth/signup', async (req, res) => {
       return res.status(409).json({ error: 'Email already in use' });
     }
 
-    // Append new user
+    // Save user
     const newUser = {
       Name: name,
       Email: email,
@@ -60,6 +79,20 @@ app.post('/api/auth/signup', async (req, res) => {
     const newWs = xlsx.utils.json_to_sheet(users);
     wb.Sheets['Users'] = newWs;
     xlsx.writeFile(wb, EXCEL_FILE_PATH);
+
+    // Send notification email to admin
+    try {
+      await sendEmail({
+        to: 'zyradigitalsofficial@gmail.com',
+        subject: '🚀 Nouvel inscrit VertexIQ',
+        html: `<h2>Nouvel inscrit</h2>
+               <p><strong>Nom:</strong> ${name}</p>
+               <p><strong>Email:</strong> ${email}</p>
+               <p><strong>Téléphone:</strong> ${phone || 'Non renseigné'}</p>`,
+      });
+    } catch (mailErr) {
+      console.warn('Email notification failed:', mailErr.message);
+    }
 
     res.status(201).json({ message: 'User signed up successfully' });
   } catch (error) {
@@ -108,6 +141,33 @@ app.get('/api/database/download', (req, res) => {
     res.download(EXCEL_FILE_PATH, 'vertexiq_database.xlsx');
   } else {
     res.status(404).json({ error: 'Database not found' });
+  }
+});
+
+// Endpoint: Contact form (dashboard + public page)
+app.post('/api/contact', async (req, res) => {
+  try {
+    const { name, message, email, subject } = req.body;
+
+    if (!name || !message) {
+      return res.status(400).json({ error: 'Nom et message requis' });
+    }
+
+    await sendEmail({
+      to: 'zyradigitalsofficial@gmail.com',
+      subject: `📩 Contact VertexIQ${subject ? ' — ' + subject : ''}`,
+      html: `<h2>Nouveau message de contact</h2>
+             <p><strong>Nom:</strong> ${name}</p>
+             ${email ? `<p><strong>Email:</strong> ${email}</p>` : ''}
+             ${subject ? `<p><strong>Sujet:</strong> ${subject}</p>` : ''}
+             <p><strong>Message:</strong></p>
+             <blockquote style="border-left:3px solid #A78BFA;padding-left:12px;color:#555">${message}</blockquote>`,
+    });
+
+    res.status(200).json({ message: 'Message sent' });
+  } catch (error) {
+    console.error('Contact email error:', error);
+    res.status(500).json({ error: 'Failed to send message' });
   }
 });
 
