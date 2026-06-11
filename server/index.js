@@ -41,6 +41,50 @@ async function sendEmail({ to, subject, html }) {
   });
 }
 
+// ---- CRM Helper ----
+async function pushLeadToCRM(user, description = "VertexIQ Signup") {
+  try {
+    const CRM_URL = process.env.CRM_API_URL || 'https://inwo.crmcore.me/api/lead_management/api/affiliates';
+    const CRM_TOKEN = process.env.CRM_API_TOKEN || 'AFF_1_92cbc1bc76284e19b711bab22587d75f';
+
+    const names = (user.name || '').trim().split(/\s+/);
+    const first_name = names[0] || 'Unknown';
+    const last_name = names.length > 1 ? names.slice(1).join(' ') : 'Doe';
+
+    const payload = {
+      country_name: "fr", // Defaulting to France based on language
+      description: description,
+      phone: user.phone || "0000000000",
+      email: user.email,
+      first_name: first_name,
+      last_name: last_name,
+      custom_fields: {
+        Source_ID: "vertexiq_web",
+        How_Much_Invested: "0",
+        Outline_Your_Case: user.message || "Signup"
+      }
+    };
+
+    const response = await fetch(CRM_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'authorization': CRM_TOKEN
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.warn('⚠️  CRM API Error:', response.status, text);
+    } else {
+      console.log(`✅ Lead pushed to CRM: ${user.email}`);
+    }
+  } catch (err) {
+    console.warn('⚠️  Failed to push lead to CRM:', err.message);
+  }
+}
+
 // ---- Workbook helper ----
 function getWorkbook() {
   if (fs.existsSync(EXCEL_FILE_PATH)) {
@@ -89,6 +133,9 @@ app.post('/api/auth/signup', async (req, res) => {
           </div>
         </div>`,
     }).catch(err => console.warn('⚠️  Email failed (likely firewall):', err.message));
+
+    // Push to CRM — fire and forget
+    pushLeadToCRM({ name, email, phone }, "VertexIQ Signup").catch(() => {});
 
     res.status(201).json({ message: 'User signed up successfully' });
   } catch (error) {
@@ -152,6 +199,9 @@ app.post('/api/contact', async (req, res) => {
           </div>
         </div>`,
     });
+
+    // Push to CRM — fire and forget
+    pushLeadToCRM({ name, email, phone: req.body.phone, message }, "VertexIQ Contact Form").catch(() => {});
 
     res.status(200).json({ message: 'Message sent' });
   } catch (error) {
