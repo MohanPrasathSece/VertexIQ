@@ -418,6 +418,18 @@ export default function App() {
 /* ---------------- NAV ---------------- */
 function Nav({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
   const links = [
     { name: "Accueil", href: "/#home" },
     { name: "Insights", href: "/#insights" },
@@ -487,7 +499,8 @@ function Nav({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[100] bg-ink text-white flex flex-col"
+            className="fixed inset-0 z-[100] bg-ink text-white flex flex-col transform-gpu"
+            style={{ willChange: "opacity" }}
           >
             <div className="flex items-center justify-between px-6 h-[72px] border-b border-white/10">
               <a href="#" className="font-display font-bold tracking-tight text-[18px]">
@@ -508,7 +521,8 @@ function Nav({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void 
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.05 + i * 0.05, duration: 0.4 }}
                   onClick={() => setMenuOpen(false)}
-                  className="font-display font-bold text-[24px] hover:text-[#A78BFA] transition-colors"
+                  className="font-display font-bold text-[24px] hover:text-[#A78BFA] transition-colors transform-gpu"
+                  style={{ willChange: "transform, opacity" }}
                 >
                   <Link to={l.href} className="block w-full">{l.name === "Succès" ? "Succès" : l.name}</Link>
                 </motion.div>
@@ -544,8 +558,8 @@ function Hero({ onSignUp, onLogin }: { onSignUp: () => void; onLogin?: () => voi
   return (
     <section id="home" className="relative overflow-hidden">
       {/* static gradient blobs — no JS scroll tracking, paint once */}
-      <div className="pointer-events-none absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-grad-lavender blur-2xl opacity-50" />
-      <div className="pointer-events-none absolute top-40 -left-32 w-[480px] h-[480px] rounded-full bg-grad-pink blur-2xl opacity-40" />
+      <div className="pointer-events-none absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-grad-lavender blur-2xl opacity-50 transform-gpu" style={{ willChange: 'transform' }} />
+      <div className="pointer-events-none absolute top-40 -left-32 w-[480px] h-[480px] rounded-full bg-grad-pink blur-2xl opacity-40 transform-gpu" style={{ willChange: 'transform' }} />
       <div className="pointer-events-none absolute inset-0 dotted-bg opacity-30" />
 
       {/* Floating Crypto Icons in Background */}
@@ -684,7 +698,7 @@ function DashboardMockup() {
   return (
     <div className="relative w-full h-full flex items-center justify-center">
       {/* glow */}
-      <div className="absolute inset-8 rounded-[40px] bg-grad-lavender blur-2xl opacity-80" />
+      <div className="absolute inset-8 rounded-[40px] bg-grad-lavender blur-2xl opacity-80 transform-gpu" style={{ willChange: 'transform' }} />
 
       {/* main card */}
       <div className="w-[90%] max-w-[460px] rounded-[28px] bg-white border border-hair shadow-float p-5 sm:p-7 relative z-10">
