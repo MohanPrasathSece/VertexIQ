@@ -1363,16 +1363,17 @@ function Footer() {
           Intelligence de marché propulsée par l'IA conçue pour les investisseurs modernes qui recherchent des décisions plus intelligentes et une plus grande confiance.
         </Reveal>
         <Magnetic className="inline-block mt-8">
-          <motion.a
-            href="#cta"
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.96 }}
-            className="group relative inline-flex items-center gap-2 rounded-full bg-ink text-white px-7 py-4 text-[14px] font-semibold overflow-hidden"
-          >
-            <span className="relative z-10">Réserver une Consultation Personnelle</span>
-            <ArrowRight className="relative z-10 size-4 transition-transform group-hover:translate-x-1" />
-            <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-          </motion.a>
+          <Link to="/contact" onClick={() => window.scrollTo(0,0)}>
+            <motion.div
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.96 }}
+              className="group relative inline-flex items-center gap-2 rounded-full bg-ink text-white px-7 py-4 text-[14px] font-semibold overflow-hidden"
+            >
+              <span className="relative z-10">Réserver une Consultation Personnelle</span>
+              <ArrowRight className="relative z-10 size-4 transition-transform group-hover:translate-x-1" />
+              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            </motion.div>
+          </Link>
         </Magnetic>
       </div>
 
