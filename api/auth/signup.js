@@ -75,6 +75,6 @@ export default async function handler(req, res) {
     return res.status(201).json({ message: 'User signed up successfully' });
   } catch (error) {
     console.error('Signup error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 };
