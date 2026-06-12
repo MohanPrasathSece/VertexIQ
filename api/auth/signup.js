@@ -14,33 +14,24 @@ const transporter = nodemailer.createTransport({
 });
 
 async function getDatabase() {
-  try {
-    const { blobs } = await list({ prefix: 'database.json', token: BLOB_TOKEN });
-    if (blobs.length > 0) {
-      const res = await fetch(blobs[0].url, {
-        headers: { Authorization: `Bearer ${BLOB_TOKEN}` }
-      });
-      if (res.ok) return await res.json();
-    }
-    return [];
-  } catch (err) {
-    console.error('Error fetching database from Blob:', err);
-    return [];
+  if (!BLOB_TOKEN) throw new Error("Missing BLOB_READ_WRITE_TOKEN environment variable");
+  const { blobs } = await list({ prefix: 'database.json', token: BLOB_TOKEN });
+  if (blobs.length > 0) {
+    const res = await fetch(blobs[0].url, {
+      headers: { Authorization: `Bearer ${BLOB_TOKEN}` }
+    });
+    if (res.ok) return await res.json();
   }
+  return [];
 }
 
 async function saveDatabase(users) {
-  try {
-    await put('database.json', JSON.stringify(users, null, 2), {
-      access: 'private',
-      token: BLOB_TOKEN,
-      addRandomSuffix: false
-    });
-    return true;
-  } catch (err) {
-    console.error('Error saving database to Blob:', err);
-    return false;
-  }
+  if (!BLOB_TOKEN) throw new Error("Missing BLOB_READ_WRITE_TOKEN environment variable");
+  await put('database.json', JSON.stringify(users, null, 2), {
+    access: 'private',
+    token: BLOB_TOKEN,
+    addRandomSuffix: false
+  });
 }
 
 module.exports = async function handler(req, res) {

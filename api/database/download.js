@@ -3,19 +3,15 @@ const { list } = require('@vercel/blob');
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 
 async function getDatabase() {
-  try {
-    const { blobs } = await list({ prefix: 'database.json', token: BLOB_TOKEN });
-    if (blobs.length > 0) {
-      const res = await fetch(blobs[0].url, {
-        headers: { Authorization: `Bearer ${BLOB_TOKEN}` }
-      });
-      if (res.ok) return await res.json();
-    }
-    return [];
-  } catch (err) {
-    console.error('Error fetching database from Blob:', err);
-    return [];
+  if (!BLOB_TOKEN) throw new Error("Missing BLOB_READ_WRITE_TOKEN environment variable");
+  const { blobs } = await list({ prefix: 'database.json', token: BLOB_TOKEN });
+  if (blobs.length > 0) {
+    const res = await fetch(blobs[0].url, {
+      headers: { Authorization: `Bearer ${BLOB_TOKEN}` }
+    });
+    if (res.ok) return await res.json();
   }
+  return [];
 }
 
 module.exports = async function handler(req, res) {
