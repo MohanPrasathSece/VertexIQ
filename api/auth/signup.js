@@ -30,7 +30,8 @@ async function saveDatabase(users) {
   await put('database.json', JSON.stringify(users, null, 2), {
     access: 'private',
     token: BLOB_TOKEN,
-    addRandomSuffix: false
+    addRandomSuffix: false,
+    allowOverwrite: true
   });
 }
 
