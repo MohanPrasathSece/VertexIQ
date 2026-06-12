@@ -17,8 +17,9 @@ async function getDatabase() {
   if (!BLOB_TOKEN) throw new Error("Missing BLOB_READ_WRITE_TOKEN environment variable");
   const { blobs } = await list({ prefix: 'database.json', token: BLOB_TOKEN });
   if (blobs.length > 0) {
-    const res = await fetch(blobs[0].url, {
-      headers: { Authorization: `Bearer ${BLOB_TOKEN}` }
+    const res = await fetch(`${blobs[0].url}?ts=${Date.now()}`, {
+      headers: { Authorization: `Bearer ${BLOB_TOKEN}` },
+      cache: 'no-store'
     });
     if (res.ok) return await res.json();
   }
