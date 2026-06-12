@@ -391,6 +391,10 @@ function Home({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void
 
 export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup' | null>(null);
+  const [user, setUser] = useState<any>(() => {
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const { streaks, fire: fireCoinStreak, remove: removeCoinStreak } = useCoinStreak();
 
   const handleSignUp = () => { fireCoinStreak(); setAuthMode('signup'); };
@@ -399,7 +403,7 @@ export default function App() {
   return (
     <div className="bg-canvas text-ink min-h-screen overflow-x-clip">
       <CoinStreakOverlay streaks={streaks} onDone={removeCoinStreak} />
-      <Nav onSignUp={handleSignUp} onLogin={handleLogin} />
+      <Nav onSignUp={handleSignUp} onLogin={handleLogin} user={user} onLogout={() => { setUser(null); localStorage.removeItem('user'); }} />
       <Routes>
         <Route path="/" element={<Home onSignUp={handleSignUp} onLogin={handleLogin} />} />
         <Route path="/contact" element={<ContactPage />} />
@@ -408,7 +412,7 @@ export default function App() {
       <Footer />
       <AnimatePresence>
         {authMode && (
-          <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitchMode={setAuthMode} />
+          <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitchMode={setAuthMode} onAuthSuccess={(u) => { setUser(u); localStorage.setItem('user', JSON.stringify(u)); }} />
         )}
       </AnimatePresence>
     </div>
@@ -416,7 +420,7 @@ export default function App() {
 }
 
 /* ---------------- NAV ---------------- */
-function Nav({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void }) {
+function Nav({ onSignUp, onLogin, user, onLogout }: { onSignUp: () => void; onLogin: () => void; user?: any; onLogout?: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -464,22 +468,35 @@ function Nav({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void 
               ))}
             </nav>
             <div className="flex items-center gap-3">
-              <button onClick={onLogin} className="hidden sm:block text-[14px] font-medium text-ink hover:text-[#A78BFA] transition-colors px-2">
-                Connexion
-              </button>
-              <Magnetic className="hidden sm:block">
-                <motion.button
-                  onClick={onSignUp}
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.96 }}
-                  className="group relative inline-flex items-center gap-2 rounded-full text-white px-5 py-2 text-[13px] font-medium overflow-hidden"
-                  style={{ backgroundColor: "#111111" }}
-                >
-                  <span className="relative z-10">S'inscrire</span>
-                  <ArrowRight className="relative z-10 size-3.5 transition-transform group-hover:translate-x-0.5" />
-                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                </motion.button>
-              </Magnetic>
+              {user ? (
+                <>
+                  <Link to="/dashboard" className="hidden sm:block text-[14px] font-medium text-ink hover:text-[#A78BFA] transition-colors px-2">
+                    Tableau de bord
+                  </Link>
+                  <button onClick={onLogout} className="hidden sm:block text-[14px] font-medium text-ink hover:text-red-500 transition-colors px-2">
+                    Déconnexion
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={onLogin} className="hidden sm:block text-[14px] font-medium text-ink hover:text-[#A78BFA] transition-colors px-2">
+                    Connexion
+                  </button>
+                  <Magnetic className="hidden sm:block">
+                    <motion.button
+                      onClick={onSignUp}
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.96 }}
+                      className="group relative inline-flex items-center gap-2 rounded-full text-white px-5 py-2 text-[13px] font-medium overflow-hidden"
+                      style={{ backgroundColor: "#111111" }}
+                    >
+                      <span className="relative z-10">S'inscrire</span>
+                      <ArrowRight className="relative z-10 size-3.5 transition-transform group-hover:translate-x-0.5" />
+                      <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                    </motion.button>
+                  </Magnetic>
+                </>
+              )}
               <button
                 className="lg:hidden p-2 rounded-full border border-hair bg-white shadow-soft"
                 onClick={() => setMenuOpen(true)}
@@ -530,20 +547,33 @@ function Nav({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void 
             </nav>
             <div className="px-8 pb-10">
               <div className="flex flex-col gap-4">
-                <button
-                  onClick={() => { setMenuOpen(false); onLogin(); }}
-                  className="w-full text-center py-4 text-[16px] font-semibold text-white border border-white/20 rounded-full"
-                >
-                  Connexion
-                </button>
-                <button
-                  onClick={() => { setMenuOpen(false); onSignUp(); }}
-                  className="group relative inline-flex items-center gap-2 rounded-full bg-white text-ink px-7 py-4 text-[14px] font-semibold overflow-hidden w-full justify-center"
-                >
-                  <span className="relative z-10">S'inscrire</span>
-                  <ArrowRight className="relative z-10 size-4" />
-                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-ink/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                </button>
+                {user ? (
+                  <>
+                    <Link to="/dashboard" onClick={() => setMenuOpen(false)} className="w-full text-center py-4 text-[16px] font-semibold text-white border border-white/20 rounded-full">
+                      Tableau de bord
+                    </Link>
+                    <button onClick={() => { setMenuOpen(false); onLogout?.(); }} className="w-full text-center py-4 text-[16px] font-semibold text-white border border-white/20 rounded-full bg-red-500/20 text-red-300">
+                      Déconnexion
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => { setMenuOpen(false); onLogin(); }}
+                      className="w-full text-center py-4 text-[16px] font-semibold text-white border border-white/20 rounded-full"
+                    >
+                      Connexion
+                    </button>
+                    <button
+                      onClick={() => { setMenuOpen(false); onSignUp(); }}
+                      className="group relative inline-flex items-center gap-2 rounded-full bg-white text-ink px-7 py-4 text-[14px] font-semibold overflow-hidden w-full justify-center"
+                    >
+                      <span className="relative z-10">S'inscrire</span>
+                      <ArrowRight className="relative z-10 size-4" />
+                      <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-ink/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
@@ -1464,7 +1494,7 @@ function SectionLabel({ children, center = false }: { children: React.ReactNode;
 
 
 /* ---------------- AUTH MODAL ---------------- */
-function AuthModal({ mode, onClose, onSwitchMode }: { mode: 'login' | 'signup', onClose: () => void, onSwitchMode?: (mode: 'login' | 'signup') => void }) {
+function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'login' | 'signup', onClose: () => void, onSwitchMode?: (mode: 'login' | 'signup') => void, onAuthSuccess?: (user: any) => void }) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -1495,6 +1525,7 @@ function AuthModal({ mode, onClose, onSwitchMode }: { mode: 'login' | 'signup', 
 
       setSubmitted(true);
       setTimeout(() => {
+        onAuthSuccess?.({ name: data.name, email: data.email });
         onClose();
         navigate('/dashboard');
       }, 2000);
@@ -1529,6 +1560,7 @@ function AuthModal({ mode, onClose, onSwitchMode }: { mode: 'login' | 'signup', 
       }
 
       console.log("Login successful:", result.user);
+      onAuthSuccess?.(result.user);
       onClose();
       navigate('/dashboard');
     } catch (err: any) {
