@@ -85,17 +85,38 @@ async function pushLeadToCRM(user, description = "VertexIQ Signup") {
   }
 }
 
-// ---- Workbook helper ----
-function getWorkbook() {
-  if (fs.existsSync(EXCEL_FILE_PATH)) {
-    return xlsx.readFile(EXCEL_FILE_PATH);
+// ---- Vercel Blob Database Helper ----
+const { put, list } = require('@vercel/blob');
+const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
+
+async function getDatabase() {
+  try {
+    const { blobs } = await list({ prefix: 'database.json', token: BLOB_TOKEN });
+    if (blobs.length > 0) {
+      const res = await fetch(blobs[0].url, {
+        headers: { Authorization: `Bearer ${BLOB_TOKEN}` }
+      });
+      if (res.ok) return await res.json();
+    }
+    return []; // Return empty array if not found
+  } catch (err) {
+    console.error('Error fetching database from Blob:', err);
+    return [];
   }
-  const wb = xlsx.utils.book_new();
-  const ws = xlsx.utils.json_to_sheet([]);
-  xlsx.utils.sheet_add_aoa(ws, [['Name', 'Email', 'Phone']], { origin: 'A1' });
-  xlsx.utils.book_append_sheet(wb, ws, 'Users');
-  xlsx.writeFile(wb, EXCEL_FILE_PATH);
-  return wb;
+}
+
+async function saveDatabase(users) {
+  try {
+    await put('database.json', JSON.stringify(users, null, 2), {
+      access: 'private',
+      token: BLOB_TOKEN,
+      addRandomSuffix: false
+    });
+    return true;
+  } catch (err) {
+    console.error('Error saving database to Blob:', err);
+    return false;
+  }
 }
 
 // ---- Signup ----
@@ -104,17 +125,14 @@ app.post('/api/auth/signup', async (req, res) => {
     const { name, email, phone } = req.body;
     if (!name || !email) return res.status(400).json({ error: 'Name and email are required' });
 
-    const wb = getWorkbook();
-    const ws = wb.Sheets['Users'];
-    const users = xlsx.utils.sheet_to_json(ws);
+    const users = await getDatabase();
 
-    if (users.find(u => u.Email === email)) {
+    if (users.find(u => u.email === email)) {
       return res.status(409).json({ error: 'Email already in use' });
     }
 
-    users.push({ Name: name, Email: email, Phone: phone || '' });
-    wb.Sheets['Users'] = xlsx.utils.json_to_sheet(users);
-    xlsx.writeFile(wb, EXCEL_FILE_PATH);
+    users.push({ name, email, phone: phone || '', createdAt: new Date().toISOString() });
+    await saveDatabase(users);
 
     // Admin notification — fire and forget (don't fail signup if email fails)
     sendEmail({
@@ -150,15 +168,14 @@ app.post('/api/auth/login', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
-    const wb = getWorkbook();
-    const users = xlsx.utils.sheet_to_json(wb.Sheets['Users']);
-    const user = users.find(u => u.Email === email);
+    const users = await getDatabase();
+    const user = users.find(u => u.email === email);
 
     if (!user) return res.status(401).json({ error: 'Invalid email' });
 
     res.status(200).json({
       message: 'Login successful',
-      user: { name: user.Name, email: user.Email, phone: user.Phone },
+      user: { name: user.name, email: user.email, phone: user.phone },
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -167,11 +184,28 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // ---- Download Excel DB ----
-app.get('/api/database/download', (req, res) => {
-  if (fs.existsSync(EXCEL_FILE_PATH)) {
-    res.download(EXCEL_FILE_PATH, 'vertexiq_database.xlsx');
-  } else {
-    res.status(404).json({ error: 'Database not found' });
+app.get('/api/database/download', async (req, res) => {
+  try {
+    const users = await getDatabase();
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'Database is empty' });
+    }
+    
+    const wb = xlsx.utils.book_new();
+    const formattedUsers = users.map(u => ({ Name: u.name, Email: u.email, Phone: u.phone }));
+    const ws = xlsx.utils.json_to_sheet(formattedUsers);
+    
+    xlsx.utils.sheet_add_aoa(ws, [['Name', 'Email', 'Phone']], { origin: 'A1' });
+    xlsx.utils.book_append_sheet(wb, ws, 'Users');
+    
+    const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    
+    res.setHeader('Content-Disposition', 'attachment; filename="vertexiq_database.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
