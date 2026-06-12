@@ -1,6 +1,22 @@
-// On Vercel serverless, the filesystem is read-only and ephemeral.
-// Files cannot persist between function invocations.
-// All signups are emailed to the admin in real-time via SMTP.
+const xlsx = require('xlsx');
+const { list } = require('@vercel/blob');
+const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
+
+async function getDatabase() {
+  try {
+    const { blobs } = await list({ prefix: 'database.json', token: BLOB_TOKEN });
+    if (blobs.length > 0) {
+      const res = await fetch(blobs[0].url, {
+        headers: { Authorization: `Bearer ${BLOB_TOKEN}` }
+      });
+      if (res.ok) return await res.json();
+    }
+    return [];
+  } catch (err) {
+    console.error('Error fetching database from Blob:', err);
+    return [];
+  }
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -9,8 +25,26 @@ module.exports = async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  return res.status(200).json({
-    message: `User data is emailed to ${process.env.GMAIL_USER} on every signup. Check your inbox for signup notifications.`,
-    tip: 'To persist a database on Vercel, connect Supabase, PlanetScale, or Airtable.',
-  });
+  try {
+    const users = await getDatabase();
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'Database is empty' });
+    }
+    
+    const wb = xlsx.utils.book_new();
+    const formattedUsers = users.map(u => ({ Name: u.name, Email: u.email, Phone: u.phone }));
+    const ws = xlsx.utils.json_to_sheet(formattedUsers);
+    
+    xlsx.utils.sheet_add_aoa(ws, [['Name', 'Email', 'Phone']], { origin: 'A1' });
+    xlsx.utils.book_append_sheet(wb, ws, 'Users');
+    
+    const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    
+    res.setHeader('Content-Disposition', 'attachment; filename="vertexiq_database.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Download error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 };

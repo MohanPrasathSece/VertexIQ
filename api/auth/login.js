@@ -1,3 +1,22 @@
+const { list } = require('@vercel/blob');
+const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
+
+async function getDatabase() {
+  try {
+    const { blobs } = await list({ prefix: 'database.json', token: BLOB_TOKEN });
+    if (blobs.length > 0) {
+      const res = await fetch(blobs[0].url, {
+        headers: { Authorization: `Bearer ${BLOB_TOKEN}` }
+      });
+      if (res.ok) return await res.json();
+    }
+    return [];
+  } catch (err) {
+    console.error('Error fetching database from Blob:', err);
+    return [];
+  }
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -8,17 +27,18 @@ module.exports = async function handler(req, res) {
 
   try {
     const { email } = req.body;
-
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    // On Vercel (serverless/stateless) we can't read the Excel file.
-    // Login redirects to the external trading platform anyway.
-    // We just accept any email and let the frontend redirect.
+    const users = await getDatabase();
+    const user = users.find(u => u.email === email);
+
+    if (!user) return res.status(401).json({ error: 'Invalid email' });
+
     return res.status(200).json({
       message: 'Login successful',
-      user: { email },
+      user: { name: user.name, email: user.email, phone: user.phone },
     });
   } catch (error) {
     console.error('Login error:', error);

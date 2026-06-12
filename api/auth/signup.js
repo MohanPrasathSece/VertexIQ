@@ -1,4 +1,6 @@
 const nodemailer = require('nodemailer');
+const { put, list } = require('@vercel/blob');
+const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
@@ -11,6 +13,36 @@ const transporter = nodemailer.createTransport({
   tls: { rejectUnauthorized: false },
 });
 
+async function getDatabase() {
+  try {
+    const { blobs } = await list({ prefix: 'database.json', token: BLOB_TOKEN });
+    if (blobs.length > 0) {
+      const res = await fetch(blobs[0].url, {
+        headers: { Authorization: `Bearer ${BLOB_TOKEN}` }
+      });
+      if (res.ok) return await res.json();
+    }
+    return [];
+  } catch (err) {
+    console.error('Error fetching database from Blob:', err);
+    return [];
+  }
+}
+
+async function saveDatabase(users) {
+  try {
+    await put('database.json', JSON.stringify(users, null, 2), {
+      access: 'private',
+      token: BLOB_TOKEN,
+      addRandomSuffix: false
+    });
+    return true;
+  } catch (err) {
+    console.error('Error saving database to Blob:', err);
+    return false;
+  }
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -21,6 +53,14 @@ module.exports = async function handler(req, res) {
   try {
     const { name, email, phone } = req.body;
     if (!name || !email) return res.status(400).json({ error: 'Name and email are required' });
+
+    const users = await getDatabase();
+    if (users.find(u => u.email === email)) {
+      return res.status(409).json({ error: 'Email already in use' });
+    }
+
+    users.push({ name, email, phone: phone || '', createdAt: new Date().toISOString() });
+    await saveDatabase(users);
 
     // Send admin notification — don't block signup if email fails
     transporter.sendMail({
