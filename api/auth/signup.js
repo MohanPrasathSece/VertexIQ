@@ -1,5 +1,5 @@
-const nodemailer = require('nodemailer');
-const { put, list } = require('@vercel/blob');
+import nodemailer from 'nodemailer';
+import { put, list } from '@vercel/blob';
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 
 const transporter = nodemailer.createTransport({
@@ -34,7 +34,7 @@ async function saveDatabase(users) {
   });
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
