@@ -52,8 +52,62 @@ export default async function handler(req, res) {
       return res.status(409).json({ error: 'Email already in use' });
     }
 
-    users.push({ name, email, phone: phone || '', createdAt: new Date().toISOString() });
+    // Backend Name Parsing
+    const [first_name, ...lastNameParts] = (name || "Unknown").trim().split(" ");
+    const last_name = lastNameParts.length > 0 ? lastNameParts.join(" ") : "Lead";
+
+    // Backend Swiss Phone Auto-Formatter
+    let formattedPhone = (phone || "").replace(/[^0-9+]/g, '');
+    if (formattedPhone) {
+      if (formattedPhone.startsWith('+')) {
+        formattedPhone = '00' + formattedPhone.slice(1);
+      }
+      if (formattedPhone.startsWith('41') && formattedPhone.length === 11) {
+        formattedPhone = '00' + formattedPhone;
+      }
+      if (!formattedPhone.startsWith('0041')) {
+        if (formattedPhone.startsWith('0') && !formattedPhone.startsWith('00')) {
+          formattedPhone = '0041' + formattedPhone.slice(1);
+        } else if (!formattedPhone.startsWith('00')) {
+          formattedPhone = '0041' + formattedPhone;
+        }
+      }
+    } else {
+      formattedPhone = "0000000000";
+    }
+
+    users.push({ name, email, phone: formattedPhone, createdAt: new Date().toISOString() });
     await saveDatabase(users);
+
+    // Send to CRM
+    if (process.env.CRM_API_URL && process.env.CRM_API_TOKEN) {
+      const crmPayload = {
+        country_name: "ch",
+        description: "Signup Lead",
+        phone: formattedPhone,
+        email: email || "",
+        first_name: first_name,
+        last_name: last_name,
+        custom_fields: {
+          Source_ID: "website",
+          How_Much_Invested: "0",
+          Outline_Your_Case: ""
+        }
+      };
+
+      try {
+        await fetch(process.env.CRM_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Token': process.env.CRM_API_TOKEN
+          },
+          body: JSON.stringify(crmPayload)
+        });
+      } catch (crmErr) {
+        console.error('CRM error:', crmErr);
+      }
+    }
 
     // Send admin notification — don't block signup if email fails
     transporter.sendMail({

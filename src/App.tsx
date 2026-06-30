@@ -1508,6 +1508,17 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
     
+    const cleanNum = (data.phone as string || "").replace(/\s+/g, "");
+    if (!cleanNum) {
+      setError("Veuillez entrer un numéro de téléphone");
+      setLoading(false);
+      return;
+    } else if (!/^(\+41|0041|0)?[1-9]\d{8}$/.test(cleanNum)) {
+      setError("Veuillez entrer un numéro suisse valide (ex: 079 123 45 67)");
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
@@ -1844,6 +1855,7 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
 function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -1851,9 +1863,21 @@ function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
+    setPhoneError(null);
+    
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
+
+    const cleanNum = (data.phone as string || "").replace(/\s+/g, "");
+    if (!cleanNum) {
+      setPhoneError("Veuillez entrer un numéro de téléphone");
+      return;
+    } else if (!/^(\+41|0041|0)?[1-9]\d{8}$/.test(cleanNum)) {
+      setPhoneError("Veuillez entrer un numéro suisse valide (ex: 079 123 45 67)");
+      return;
+    }
+
+    setLoading(true);
     try {
       await fetch('/api/contact', {
         method: 'POST',
@@ -1861,7 +1885,8 @@ function ContactPage() {
         body: JSON.stringify({
           name: data.name,
           email: data.email,
-          message: data.message,
+          phone: data.phone,
+          message: data.message || "",
         }),
       });
     } catch (_) {}
@@ -1923,15 +1948,15 @@ function ContactPage() {
                 <input
                   name="phone"
                   type="tel"
-                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3.5 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                  className={`w-full rounded-xl border bg-[#FAFAFA] px-4 py-3.5 text-[14px] outline-none transition-colors ${phoneError ? 'border-red-500 focus:border-red-500' : 'border-hair focus:border-[#A78BFA]'}`}
                   placeholder="+33 6 00 00 00 00"
                 />
+                {phoneError && <p className="text-red-500 text-[12px] mt-1 ml-1">{phoneError}</p>}
               </div>
               <div>
                 <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Message</label>
                 <textarea
                   name="message"
-                  required
                   rows={4}
                   className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3.5 text-[14px] outline-none focus:border-[#A78BFA] transition-colors resize-none"
                   placeholder="Comment pouvons-nous vous aider ?"
@@ -2200,12 +2225,25 @@ function AnimatedProfitCard() {
 function ContactLeadForm() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
+    setPhoneError(null);
+
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
+
+    const cleanNum = (data.phone as string || "").replace(/\s+/g, "");
+    if (!cleanNum) {
+      setPhoneError("Veuillez entrer un numéro de téléphone");
+      return;
+    } else if (!/^(\+41|0041|0)?[1-9]\d{8}$/.test(cleanNum)) {
+      setPhoneError("Veuillez entrer un numéro suisse valide (ex: 079 123 45 67)");
+      return;
+    }
+
+    setLoading(true);
     try {
       await fetch('/api/contact', {
         method: 'POST',
@@ -2213,7 +2251,8 @@ function ContactLeadForm() {
         body: JSON.stringify({
           name: data.name,
           email: data.email,
-          message: data.message,
+          phone: data.phone,
+          message: data.message || "",
         }),
       });
     } catch (_) {}
@@ -2311,8 +2350,9 @@ function ContactLeadForm() {
                   name="phone"
                   type="tel"
                   placeholder="+33 6 00 00 00 00"
-                  className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all placeholder:text-ink/30"
+                  className={`w-full rounded-xl border bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 transition-all placeholder:text-ink/30 ${phoneError ? 'border-red-500 focus:border-red-500' : 'border-hair focus:border-[#A78BFA]'}`}
                 />
+                {phoneError && <p className="text-red-500 text-[12px] mt-1">{phoneError}</p>}
               </div>
 
               <div>
@@ -2320,7 +2360,6 @@ function ContactLeadForm() {
                 <textarea
                   name="message"
                   placeholder="Comment pouvons-nous vous aider ?"
-                  required
                   rows={4}
                   className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all resize-none placeholder:text-ink/30"
                 />

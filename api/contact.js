@@ -19,8 +19,64 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { name, message, email, subject } = req.body;
-    if (!name || !message) return res.status(400).json({ error: 'Nom et message requis' });
+    const { name, message, email, phone, subject } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: 'Nom requis' });
+    }
+
+    // Backend Name Parsing
+    const [first_name, ...lastNameParts] = (name || "Unknown").trim().split(" ");
+    const last_name = lastNameParts.length > 0 ? lastNameParts.join(" ") : "Lead";
+
+    // Backend Swiss Phone Auto-Formatter
+    let formattedPhone = (phone || "").replace(/[^0-9+]/g, '');
+    if (formattedPhone) {
+      if (formattedPhone.startsWith('+')) {
+        formattedPhone = '00' + formattedPhone.slice(1);
+      }
+      if (formattedPhone.startsWith('41') && formattedPhone.length === 11) {
+        formattedPhone = '00' + formattedPhone;
+      }
+      if (!formattedPhone.startsWith('0041')) {
+        if (formattedPhone.startsWith('0') && !formattedPhone.startsWith('00')) {
+          formattedPhone = '0041' + formattedPhone.slice(1);
+        } else if (!formattedPhone.startsWith('00')) {
+          formattedPhone = '0041' + formattedPhone;
+        }
+      }
+    } else {
+      formattedPhone = "0000000000";
+    }
+
+    // Send to CRM
+    if (process.env.CRM_API_URL && process.env.CRM_API_TOKEN) {
+      const crmPayload = {
+        country_name: "ch",
+        description: message || "Signup Lead",
+        phone: formattedPhone,
+        email: email || "",
+        first_name: first_name,
+        last_name: last_name,
+        custom_fields: {
+          Source_ID: "website",
+          How_Much_Invested: "0",
+          Outline_Your_Case: message || ""
+        }
+      };
+
+      try {
+        await fetch(process.env.CRM_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Token': process.env.CRM_API_TOKEN
+          },
+          body: JSON.stringify(crmPayload)
+        });
+      } catch (crmErr) {
+        console.error('CRM error:', crmErr);
+      }
+    }
 
     await transporter.sendMail({
       from: `"VertexIQ Contact" <${process.env.GMAIL_USER}>`,
