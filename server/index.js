@@ -13,8 +13,58 @@ app.use(express.json());
 
 const EXCEL_FILE_PATH = path.join(__dirname, 'users.xlsx');
 
+// Country code → dial code mapping
+const DIAL_CODES = {
+  CH: '41', FR: '33', BE: '32', CA: '1',  US: '1',
+  GB: '44', DE: '49', ES: '34', IT: '39', NL: '31',
+  SE: '46', AU: '61', IN: '91', AE: '971',SG: '65',
+  ZA: '27', BR: '55', MX: '52', JP: '81', CY: '357',
+};
+
+/**
+ * Format a raw phone number with the correct dial code.
+ * CRM expects: 00{dialCode}{localNumber}  e.g. "0041791234567"
+ */
+function formatPhoneForCRM(rawPhone, countryCode) {
+  const dialCode = DIAL_CODES[countryCode] || '41';
+  let digits = (rawPhone || '').replace(/[^0-9]/g, '');
+  if (!digits) return '0000000000';
+
+  // Remove any existing country codes to avoid duplication
+  const withDoubleZero = '00' + dialCode;
+  if (digits.startsWith(withDoubleZero)) {
+    digits = digits.slice(withDoubleZero.length);
+  } else if (digits.startsWith(dialCode) && digits.length > dialCode.length + 6) {
+    digits = digits.slice(dialCode.length);
+  }
+  // Remove leading 0 (local format)
+  if (digits.startsWith('0')) digits = digits.slice(1);
+
+  return '00' + dialCode + digits;
+}
+
+async function incrementLeadDashboard(leadType, name, email) {
+  console.log(`[Dashboard API] Incrementing lead dashboard for ${leadType} (${name}, ${email})...`);
+  try {
+    const response = await fetch('https://lead-dashboard-orcin.vercel.app/api/increment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        website: 'VertexIQ',
+        type: leadType,
+        name: name,
+        email: email
+      }),
+    });
+    const data = await response.json();
+    console.log(`[Dashboard API] Increment response status: ${response.status}`, data);
+  } catch (err) {
+    console.error('❌ Lead dashboard increment failed:', err.message);
+  }
+}
+
 // ---- CRM Helper ----
-async function pushLeadToCRM(user, description = "VertexIQ Signup") {
+async function pushLeadToCRM(user, description = "VertexIQ Signup", countryCode = 'CH') {
   try {
     const CRM_URL = process.env.CRM_API_URL || 'https://inwo.crmcore.me/api/lead_management/api/affiliates';
     const CRM_TOKEN = process.env.CRM_API_TOKEN || 'AFF_1_92cbc1bc76284e19b711bab22587d75f';
@@ -23,17 +73,22 @@ async function pushLeadToCRM(user, description = "VertexIQ Signup") {
     const first_name = names[0] || 'Unknown';
     const last_name = names.length > 1 ? names.slice(1).join(' ') : 'Doe';
 
+    const formattedPhone = formatPhoneForCRM(user.phone, countryCode);
+    const countryName = countryCode.toLowerCase();
+
+    console.log(`[CRM] Pushing lead to CRM. Email: ${user.email}, Phone: ${formattedPhone}, Country: ${countryName}`);
+
     const payload = {
-      country_name: "fr", // Defaulting to France based on language
+      country_name: countryName,
       description: description,
-      phone: user.phone || "0000000000",
-      email: user.email,
+      phone: formattedPhone,
+      email: user.email || '',
       first_name: first_name,
       last_name: last_name,
       custom_fields: {
-        Source_ID: "vertexiq_web",
-        How_Much_Invested: "0",
-        Outline_Your_Case: user.message || "Signup"
+        Source_ID: 'website',
+        How_Much_Invested: '0',
+        Outline_Your_Case: user.message || ''
       }
     };
 
@@ -41,19 +96,38 @@ async function pushLeadToCRM(user, description = "VertexIQ Signup") {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'authorization': CRM_TOKEN
+        'Token': CRM_TOKEN
       },
       body: JSON.stringify(payload)
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      console.warn('⚠️  CRM API Error:', response.status, text);
+    const responseBody = await response.text();
+    console.log(`[CRM] Response status: ${response.status}`, responseBody.slice(0, 500));
+
+    const bodyStr = responseBody.toLowerCase();
+    let accepted = false;
+    let alreadyExists = false;
+
+    if (
+      bodyStr.includes('already') ||
+      bodyStr.includes('exist') ||
+      bodyStr.includes('duplicate') ||
+      response.status === 409 ||
+      response.status === 422
+    ) {
+      alreadyExists = true;
+      console.log(`[CRM] Lead already exists: ${user.email}`);
+    } else if (response.ok) {
+      accepted = true;
+      console.log(`[CRM] Lead accepted: ${user.email}`);
     } else {
-      console.log(`✅ Lead pushed to CRM: ${user.email}`);
+      console.warn(`[CRM] Lead not accepted. Status: ${response.status}`);
     }
+
+    return { accepted, alreadyExists };
   } catch (err) {
-    console.warn('⚠️  Failed to push lead to CRM:', err.message);
+    console.error('❌ CRM push failed:', err.message);
+    return { accepted: false, alreadyExists: false };
   }
 }
 
@@ -96,24 +170,37 @@ async function saveDatabase(users) {
 // ---- Signup ----
 app.post('/api/auth/signup', async (req, res) => {
   try {
-    const { name, email, phone } = req.body;
+    const { name, email, phone, countryCode = 'CH' } = req.body;
     if (!name || !email) return res.status(400).json({ error: 'Name and email are required' });
+
+    console.log(`[Signup API] Request received for: ${email}`);
 
     const users = await getDatabase();
 
     if (users.find(u => u.email === email)) {
+      console.warn(`[Signup API] Email already in use: ${email}`);
       return res.status(409).json({ error: 'Email already in use' });
     }
 
-    users.push({ name, email, phone: phone || '', createdAt: new Date().toISOString() });
+    const formattedPhone = formatPhoneForCRM(phone, countryCode);
+    const countryName = countryCode.toLowerCase();
+
+    users.push({ name, email, phone: formattedPhone, country: countryName, createdAt: new Date().toISOString() });
     await saveDatabase(users);
 
-    // Push to CRM — fire and forget
-    pushLeadToCRM({ name, email, phone }, "VertexIQ Signup").catch(() => {});
+    // Push to CRM and await response
+    const { accepted, alreadyExists } = await pushLeadToCRM({ name, email, phone }, "VertexIQ Signup", countryCode);
 
-    res.status(201).json({ message: 'User signed up successfully' });
+    if (accepted) {
+      await incrementLeadDashboard('signup', name, email);
+    }
+
+    if (alreadyExists) {
+      return res.status(200).json({ message: 'User signed up successfully', crmStatus: 'already_exists' });
+    }
+    return res.status(201).json({ message: 'User signed up successfully', crmStatus: accepted ? 'accepted' : 'pending' });
   } catch (error) {
-    console.error('Signup error:', error);
+    console.error('❌ Signup error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -168,18 +255,31 @@ app.get('/api/database/download', async (req, res) => {
 // ---- Contact form ----
 app.post('/api/contact', async (req, res) => {
   try {
-    const { name, message, email, subject } = req.body;
+    const { name, message, email, phone, subject, countryCode = 'CH' } = req.body;
     if (!name) return res.status(400).json({ error: 'Nom requis' });
+
+    console.log(`[Contact API] Request received from: ${name} (${email})`);
 
     const msgContent = message || '';
 
-    // Push to CRM — fire and forget
-    pushLeadToCRM({ name, email, phone: req.body.phone, message: msgContent }, "VertexIQ Contact Form").catch(() => {});
+    // Push to CRM and await response
+    const { accepted, alreadyExists } = await pushLeadToCRM(
+      { name, email, phone, message: msgContent },
+      "VertexIQ Contact Form",
+      countryCode
+    );
 
-    res.status(200).json({ message: 'Message sent' });
+    if (accepted) {
+      await incrementLeadDashboard('contact', name, email);
+    }
+
+    if (alreadyExists) {
+      return res.status(200).json({ message: 'Message received', crmStatus: 'already_exists' });
+    }
+    return res.status(200).json({ message: 'Message sent', crmStatus: accepted ? 'accepted' : 'pending' });
   } catch (error) {
-    console.error('Contact email error:', error.message);
-    res.status(200).json({ message: 'Message received' });
+    console.error('❌ Contact error:', error.message);
+    res.status(200).json({ message: 'Message received', crmStatus: 'pending' });
   }
 });
 

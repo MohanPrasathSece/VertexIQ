@@ -131,10 +131,14 @@ export default async function handler(req, res) {
     if (crmAlreadyExists) {
       return res.status(200).json({ message: 'Message received', crmStatus: 'already_exists' });
     }
-    return res.status(200).json({ message: 'Message sent', crmStatus: crmAccepted ? 'accepted' : 'pending' });
-
+    if (crmAccepted) {
+      return res.status(200).json({ message: 'Message sent', crmStatus: 'accepted' });
+    } else {
+      console.warn(`[Contact API] CRM did not accept the lead. Returning error.`);
+      return res.status(502).json({ error: 'CRM submission failed', crmStatus: 'failed' });
+    }
   } catch (error) {
-    console.error('Contact email error:', error.message);
-    return res.status(200).json({ message: 'Message received', crmStatus: 'pending' });
+    console.error('Contact error:', error.message);
+    return res.status(502).json({ error: error.message || 'CRM submission failed', crmStatus: 'failed' });
   }
 };

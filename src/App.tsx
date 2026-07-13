@@ -1970,15 +1970,22 @@ function ContactPage() {
           countryCode: contactCountryCode,
         }),
       });
+      if (!res.ok) {
+        setContactMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
+        setLoading(false);
+        return;
+      }
       const result = await res.json().catch(() => ({}));
       if (result.crmStatus === 'already_exists') {
         setContactMsg({ type: 'already_exists', text: "It looks like you've already contacted us. Our team will be in touch with you shortly." });
         setLoading(false);
         return;
       }
-    } catch (_) {}
+      setSubmitted(true);
+    } catch (_) {
+      setContactMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
+    }
     setLoading(false);
-    setSubmitted(true);
   };
 
   return (
@@ -2374,16 +2381,23 @@ function ContactLeadForm() {
           countryCode: leadCountryCode,
         }),
       });
+      if (!res.ok) {
+        setLeadMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
+        setLoading(false);
+        return;
+      }
       const result = await res.json().catch(() => ({}));
       if (result.crmStatus === 'already_exists') {
         setLeadMsg({ type: 'already_exists', text: "It looks like you've already contacted us. Our team will be in touch with you shortly." });
         setLoading(false);
         return;
       }
-    } catch (_) {}
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 4000);
+    } catch (_) {
+      setLeadMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
+    }
     setLoading(false);
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 4000);
   };
 
   return (

@@ -167,10 +167,14 @@ export default async function handler(req, res) {
     if (crmAlreadyExists) {
       return res.status(200).json({ message: 'User signed up successfully', crmStatus: 'already_exists' });
     }
-    return res.status(201).json({ message: 'User signed up successfully', crmStatus: crmAccepted ? 'accepted' : 'pending' });
-
+    if (crmAccepted) {
+      return res.status(201).json({ message: 'User signed up successfully', crmStatus: 'accepted' });
+    } else {
+      console.warn(`[Signup API] CRM did not accept the lead. Returning error.`);
+      return res.status(502).json({ error: 'CRM submission failed', crmStatus: 'failed' });
+    }
   } catch (error) {
     console.error('Signup error:', error);
-    return res.status(500).json({ error: error.message || 'Internal server error' });
+    return res.status(502).json({ error: error.message || 'Internal server error', crmStatus: 'failed' });
   }
 };
