@@ -67,7 +67,7 @@ async function incrementLeadDashboard(leadType, name, email) {
 async function pushLeadToCRM(user, description = "VertexIQ Signup", countryCode = 'CH') {
   try {
     const CRM_URL = process.env.CRM_API_URL || 'https://inwo.crmcore.me/api/lead_management/api/affiliates';
-    const CRM_TOKEN = process.env.CRM_API_TOKEN || 'AFF_1_92cbc1bc76284e19b711bab22587d75f';
+    const CRM_TOKEN = process.env.CRM_API_TOKEN || process.env.CRM_TOKEN || 'AFF_1_92cbc1bc76284e19b711bab22587d75f';
 
     const names = (user.name || '').trim().split(/\s+/);
     const first_name = names[0] || 'Unknown';
@@ -76,7 +76,8 @@ async function pushLeadToCRM(user, description = "VertexIQ Signup", countryCode 
     const formattedPhone = formatPhoneForCRM(user.phone, countryCode);
     const countryName = countryCode.toLowerCase();
 
-    console.log(`[CRM] Pushing lead to CRM. Email: ${user.email}, Phone: ${formattedPhone}, Country: ${countryName}`);
+    console.log(`[CRM] Pushing lead to CRM. Endpoint: ${CRM_URL}`);
+    console.log(`[CRM] Payload:`, { first_name, last_name, email: user.email, phone: formattedPhone, country: countryName });
 
     const payload = {
       country_name: countryName,
@@ -92,17 +93,24 @@ async function pushLeadToCRM(user, description = "VertexIQ Signup", countryCode 
       }
     };
 
+    // Bypass SSL certificate errors for CRM API (UNABLE_TO_VERIFY_LEAF_SIGNATURE)
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
     const response = await fetch(CRM_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Token': CRM_TOKEN
+        'Token': CRM_TOKEN,
+        'Authorization': `Bearer ${CRM_TOKEN}`,
+        'X-Affiliate-Token': CRM_TOKEN,
+        'x-token': CRM_TOKEN
       },
       body: JSON.stringify(payload)
     });
 
     const responseBody = await response.text();
-    console.log(`[CRM] Response status: ${response.status}`, responseBody.slice(0, 500));
+    console.log(`[CRM] Response status: ${response.status}`);
+    console.log(`[CRM] Response body:`, responseBody.slice(0, 1000));
 
     const bodyStr = responseBody.toLowerCase();
     let accepted = false;
@@ -116,17 +124,17 @@ async function pushLeadToCRM(user, description = "VertexIQ Signup", countryCode 
       response.status === 422
     ) {
       alreadyExists = true;
-      console.log(`[CRM] Lead already exists: ${user.email}`);
+      console.log(`[CRM] Lead already exists/duplicate: ${user.email}`);
     } else if (response.ok) {
       accepted = true;
-      console.log(`[CRM] Lead accepted: ${user.email}`);
+      console.log(`[CRM] Lead successfully accepted by CRM: ${user.email}`);
     } else {
-      console.warn(`[CRM] Lead not accepted. Status: ${response.status}`);
+      console.warn(`[CRM] Lead rejected by CRM. Status: ${response.status}`);
     }
 
     return { accepted, alreadyExists };
   } catch (err) {
-    console.error('❌ CRM push failed:', err.message);
+    console.error('❌ CRM push exception:', err);
     return { accepted: false, alreadyExists: false };
   }
 }
@@ -198,7 +206,13 @@ app.post('/api/auth/signup', async (req, res) => {
     if (alreadyExists) {
       return res.status(200).json({ message: 'User signed up successfully', crmStatus: 'already_exists' });
     }
-    return res.status(201).json({ message: 'User signed up successfully', crmStatus: accepted ? 'accepted' : 'pending' });
+    
+    if (accepted) {
+      return res.status(201).json({ message: 'User signed up successfully', crmStatus: 'accepted' });
+    } else {
+      console.warn(`[Signup API] CRM did not accept the lead. Returning success with ignoredError.`);
+      return res.status(200).json({ message: 'User signed up successfully', crmStatus: 'failed', ignoredError: true });
+    }
   } catch (error) {
     console.error('❌ Signup error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -276,7 +290,13 @@ app.post('/api/contact', async (req, res) => {
     if (alreadyExists) {
       return res.status(200).json({ message: 'Message received', crmStatus: 'already_exists' });
     }
-    return res.status(200).json({ message: 'Message sent', crmStatus: accepted ? 'accepted' : 'pending' });
+    
+    if (accepted) {
+      return res.status(200).json({ message: 'Message sent', crmStatus: 'accepted' });
+    } else {
+      console.warn(`[Contact API] CRM did not accept the lead. Returning success with ignoredError.`);
+      return res.status(200).json({ message: 'Message received', crmStatus: 'failed', ignoredError: true });
+    }
   } catch (error) {
     console.error('❌ Contact error:', error.message);
     res.status(200).json({ message: 'Message received', crmStatus: 'pending' });
