@@ -105,13 +105,18 @@ export default async function handler(req, res) {
         });
 
         const crmBody = await crmRes.text();
+        let parsedJson = null;
+        try {
+          parsedJson = JSON.parse(crmBody);
+        } catch (e) {}
+
         const bodyStr = crmBody.toLowerCase();
+        const isDuplicateError = bodyStr.includes('already') || bodyStr.includes('exist') || (bodyStr.includes('duplicate') && !bodyStr.includes('"duplicate":false'));
 
         // Detect "already exists" patterns across CRM responses
         if (
-          bodyStr.includes('already') ||
-          bodyStr.includes('exist') ||
-          bodyStr.includes('duplicate') ||
+          (parsedJson && (parsedJson.duplicate === true || (parsedJson.lead && parsedJson.lead.duplicate === true))) ||
+          (crmRes.status === 500 && isDuplicateError) ||
           crmRes.status === 409 ||
           crmRes.status === 422
         ) {

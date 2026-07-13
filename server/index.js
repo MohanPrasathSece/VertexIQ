@@ -112,14 +112,21 @@ async function pushLeadToCRM(user, description = "VertexIQ Signup", countryCode 
     console.log(`[CRM] Response status: ${response.status}`);
     console.log(`[CRM] Response body:`, responseBody.slice(0, 1000));
 
-    const bodyStr = responseBody.toLowerCase();
     let accepted = false;
     let alreadyExists = false;
 
+    // Parse JSON safely to check duplicate status
+    let parsedJson = null;
+    try {
+      parsedJson = JSON.parse(responseBody);
+    } catch (e) {}
+
+    const bodyStr = responseBody.toLowerCase();
+    const isDuplicateError = bodyStr.includes('already') || bodyStr.includes('exist') || (bodyStr.includes('duplicate') && !bodyStr.includes('"duplicate":false'));
+
     if (
-      bodyStr.includes('already') ||
-      bodyStr.includes('exist') ||
-      bodyStr.includes('duplicate') ||
+      (parsedJson && (parsedJson.duplicate === true || (parsedJson.lead && parsedJson.lead.duplicate === true))) ||
+      (response.status === 500 && isDuplicateError) ||
       response.status === 409 ||
       response.status === 422
     ) {
