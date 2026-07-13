@@ -41,6 +41,7 @@ import {
 import { useRef, useState, useEffect, useCallback, type ReactNode, type MouseEvent } from "react";
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { ResponsiveContainer, LineChart as RechartsLineChart, Line, YAxis, XAxis, Tooltip, CartesianGrid } from 'recharts';
+import { trackPixelEvent } from "@/lib/pixel";
 
 /* ---------------- MOTION HELPERS ---------------- */
 const fadeUp: Variants = {
@@ -396,6 +397,11 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
   const { streaks, fire: fireCoinStreak, remove: removeCoinStreak } = useCoinStreak();
+  const location = useLocation();
+
+  useEffect(() => {
+    trackPixelEvent("PageView");
+  }, [location.pathname]);
 
   const handleSignUp = () => { fireCoinStreak(); setAuthMode('signup'); };
   const handleLogin = () => { fireCoinStreak(); setAuthMode('login'); };
@@ -1579,6 +1585,14 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
         return;
       }
 
+      trackPixelEvent("CompleteRegistration", {
+        content_name: "VertexIQ Signup",
+        status: "success"
+      });
+      trackPixelEvent("Lead", {
+        content_name: "VertexIQ Signup",
+        email: data.email
+      });
       setSubmitted(true);
       setTimeout(() => {
         onAuthSuccess?.({ name: data.name, email: data.email });
@@ -1981,6 +1995,10 @@ function ContactPage() {
         setLoading(false);
         return;
       }
+      trackPixelEvent("Lead", {
+        content_name: "VertexIQ Contact Form",
+        email: data.email
+      });
       setSubmitted(true);
     } catch (_) {
       setContactMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
@@ -2392,6 +2410,10 @@ function ContactLeadForm() {
         setLoading(false);
         return;
       }
+      trackPixelEvent("Lead", {
+        content_name: "VertexIQ Footer/Modal Contact Form",
+        email: data.email
+      });
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 4000);
     } catch (_) {
