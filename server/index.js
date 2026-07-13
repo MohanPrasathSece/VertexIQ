@@ -179,14 +179,21 @@ async function saveDatabase(users) {
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { name, email, phone, countryCode = 'CH' } = req.body;
-    if (!name || !email) return res.status(400).json({ error: 'Name and email are required' });
+    console.log(`\n--- [Signup API Request] ---`);
+    console.log(`Name: ${name}`);
+    console.log(`Email: ${email}`);
+    console.log(`Phone: ${phone}`);
+    console.log(`CountryCode: ${countryCode}`);
 
-    console.log(`[Signup API] Request received for: ${email}`);
+    if (!name || !email) {
+      console.warn(`[Signup API Warning] Rejected: Missing name or email.`);
+      return res.status(400).json({ error: 'Name and email are required' });
+    }
 
     const users = await getDatabase();
 
     if (users.find(u => u.email === email)) {
-      console.warn(`[Signup API] Email already in use: ${email}`);
+      console.warn(`[Signup API Warning] Rejected: Email already in use: ${email}`);
       return res.status(409).json({ error: 'Email already in use' });
     }
 
@@ -195,6 +202,7 @@ app.post('/api/auth/signup', async (req, res) => {
 
     users.push({ name, email, phone: formattedPhone, country: countryName, createdAt: new Date().toISOString() });
     await saveDatabase(users);
+    console.log(`[Signup API] User successfully saved to Database.`);
 
     // Push to CRM and await response
     const { accepted, alreadyExists } = await pushLeadToCRM({ name, email, phone }, "VertexIQ Signup", countryCode);
@@ -204,17 +212,19 @@ app.post('/api/auth/signup', async (req, res) => {
     }
 
     if (alreadyExists) {
+      console.log(`[Signup API Success] Lead already exists on CRM. Email: ${email}`);
       return res.status(200).json({ message: 'User signed up successfully', crmStatus: 'already_exists' });
     }
     
     if (accepted) {
+      console.log(`[Signup API Success] Lead successfully accepted by CRM. Email: ${email}`);
       return res.status(201).json({ message: 'User signed up successfully', crmStatus: 'accepted' });
     } else {
-      console.warn(`[Signup API] CRM did not accept the lead. Returning 502 error.`);
+      console.warn(`[Signup API Failure] CRM did not accept the lead. Returning 502 error.`);
       return res.status(502).json({ error: 'CRM submission failed', crmStatus: 'failed' });
     }
   } catch (error) {
-    console.error('❌ Signup error:', error);
+    console.error('❌ [Signup API Error]:', error);
     res.status(502).json({ error: error.message || 'Internal server error', crmStatus: 'failed' });
   }
 });
@@ -223,19 +233,29 @@ app.post('/api/auth/signup', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
+    console.log(`\n--- [Login API Request] ---`);
+    console.log(`Email: ${email}`);
+
+    if (!email) {
+      console.warn(`[Login API Warning] Rejected: Missing email address.`);
+      return res.status(400).json({ error: 'Email is required' });
+    }
 
     const users = await getDatabase();
     const user = users.find(u => u.email === email);
 
-    if (!user) return res.status(401).json({ error: 'Invalid email' });
+    if (!user) {
+      console.warn(`[Login API Warning] Login failed: Email ${email} not found.`);
+      return res.status(401).json({ error: 'Invalid email' });
+    }
 
+    console.log(`[Login API Success] User authenticated successfully: ${user.name} (${email})`);
     res.status(200).json({
       message: 'Login successful',
       user: { name: user.name, email: user.email, phone: user.phone },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ [Login API Error]:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -270,9 +290,18 @@ app.get('/api/database/download', async (req, res) => {
 app.post('/api/contact', async (req, res) => {
   try {
     const { name, message, email, phone, subject, countryCode = 'CH' } = req.body;
-    if (!name) return res.status(400).json({ error: 'Nom requis' });
+    console.log(`\n--- [Contact API Request] ---`);
+    console.log(`Name: ${name}`);
+    console.log(`Email: ${email}`);
+    console.log(`Phone: ${phone}`);
+    console.log(`Subject: ${subject || 'None'}`);
+    console.log(`CountryCode: ${countryCode}`);
+    console.log(`Message: ${message || ''}`);
 
-    console.log(`[Contact API] Request received from: ${name} (${email})`);
+    if (!name) {
+      console.warn(`[Contact API Warning] Rejected: Missing name.`);
+      return res.status(400).json({ error: 'Nom requis' });
+    }
 
     const msgContent = message || '';
 
@@ -288,17 +317,19 @@ app.post('/api/contact', async (req, res) => {
     }
 
     if (alreadyExists) {
+      console.log(`[Contact API Success] Lead already exists on CRM. Email: ${email}`);
       return res.status(200).json({ message: 'Message received', crmStatus: 'already_exists' });
     }
     
     if (accepted) {
+      console.log(`[Contact API Success] Lead successfully accepted by CRM. Email: ${email}`);
       return res.status(200).json({ message: 'Message sent', crmStatus: 'accepted' });
     } else {
-      console.warn(`[Contact API] CRM did not accept the lead. Returning 502 error.`);
+      console.warn(`[Contact API Failure] CRM did not accept the lead. Returning 502 error.`);
       return res.status(502).json({ error: 'CRM submission failed', crmStatus: 'failed' });
     }
   } catch (error) {
-    console.error('❌ Contact error:', error.message);
+    console.error('❌ [Contact API Error]:', error.message);
     res.status(502).json({ error: error.message || 'CRM submission failed', crmStatus: 'failed' });
   }
 });
