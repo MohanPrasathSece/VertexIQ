@@ -1493,28 +1493,58 @@ function SectionLabel({ children, center = false }: { children: React.ReactNode;
 
 
 
+/* ---------------- COUNTRY PHONE PATTERNS ---------------- */
+const COUNTRY_PHONE_PATTERNS: Record<string, { dialCode: string; pattern: RegExp; example: string; flag: string; label: string }> = {
+  CH:  { dialCode: '41',  pattern: /^(\+41|0041|0)?[1-9]\d{8}$/,          example: '079 123 45 67',    flag: '🇨🇭', label: 'Switzerland' },
+  FR:  { dialCode: '33',  pattern: /^(\+33|0033|0)?[1-9]\d{8}$/,          example: '06 12 34 56 78',   flag: '🇫🇷', label: 'France' },
+  BE:  { dialCode: '32',  pattern: /^(\+32|0032|0)?[1-9]\d{7,8}$/,        example: '0470 12 34 56',    flag: '🇧🇪', label: 'Belgium' },
+  CA:  { dialCode: '1',   pattern: /^(\+1|001|1)?[2-9]\d{9}$/,            example: '416 123 4567',     flag: '🇨🇦', label: 'Canada' },
+  US:  { dialCode: '1',   pattern: /^(\+1|001|1)?[2-9]\d{9}$/,            example: '212 123 4567',     flag: '🇺🇸', label: 'USA' },
+  GB:  { dialCode: '44',  pattern: /^(\+44|0044|0)?[1-9]\d{9}$/,          example: '07700 900000',     flag: '🇬🇧', label: 'United Kingdom' },
+  DE:  { dialCode: '49',  pattern: /^(\+49|0049|0)?[1-9]\d{9,11}$/,       example: '0151 12345678',    flag: '🇩🇪', label: 'Germany' },
+  ES:  { dialCode: '34',  pattern: /^(\+34|0034)?[6-9]\d{8}$/,            example: '612 345 678',      flag: '🇪🇸', label: 'Spain' },
+  IT:  { dialCode: '39',  pattern: /^(\+39|0039)?3\d{9}$/,                example: '320 123 4567',     flag: '🇮🇹', label: 'Italy' },
+  NL:  { dialCode: '31',  pattern: /^(\+31|0031|0)?6\d{8}$/,              example: '06 12345678',      flag: '🇳🇱', label: 'Netherlands' },
+  SE:  { dialCode: '46',  pattern: /^(\+46|0046|0)?7\d{8}$/,              example: '070 123 45 67',    flag: '🇸🇪', label: 'Sweden' },
+  AU:  { dialCode: '61',  pattern: /^(\+61|0061|0)?4\d{8}$/,              example: '0412 345 678',     flag: '🇦🇺', label: 'Australia' },
+  IN:  { dialCode: '91',  pattern: /^(\+91|0091|0)?[6-9]\d{9}$/,          example: '98765 43210',      flag: '🇮🇳', label: 'India' },
+  AE:  { dialCode: '971', pattern: /^(\+971|00971|0)?5\d{8}$/,            example: '050 123 4567',     flag: '🇦🇪', label: 'UAE' },
+  SG:  { dialCode: '65',  pattern: /^(\+65|0065)?[689]\d{7}$/,            example: '9123 4567',        flag: '🇸🇬', label: 'Singapore' },
+  ZA:  { dialCode: '27',  pattern: /^(\+27|0027|0)?[6-8]\d{8}$/,          example: '071 123 4567',     flag: '🇿🇦', label: 'South Africa' },
+  BR:  { dialCode: '55',  pattern: /^(\+55|0055|0)?[1-9]\d{10}$/,         example: '11 9 1234 5678',   flag: '🇧🇷', label: 'Brazil' },
+  MX:  { dialCode: '52',  pattern: /^(\+52|0052)?[1-9]\d{9}$/,            example: '55 1234 5678',     flag: '🇲🇽', label: 'Mexico' },
+  JP:  { dialCode: '81',  pattern: /^(\+81|0081|0)?[7-9]\d{9}$/,          example: '090 1234 5678',    flag: '🇯🇵', label: 'Japan' },
+  CY:  { dialCode: '357', pattern: /^(\+357|00357)?9\d{7}$/,              example: '96 123456',        flag: '🇨🇾', label: 'Cyprus' },
+};
+
 /* ---------------- AUTH MODAL ---------------- */
 function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'login' | 'signup', onClose: () => void, onSwitchMode?: (mode: 'login' | 'signup') => void, onAuthSuccess?: (user: any) => void }) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<'already_exists' | 'invalid' | 'generic' | null>(null);
   const [loading, setLoading] = useState(false);
+  const [signupCountryCode, setSignupCountryCode] = useState('CH');
   const navigate = useNavigate();
 
   const handleSignupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
+    setErrorType(null);
     setLoading(true);
     
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
     
-    const cleanNum = (data.phone as string || "").replace(/\s+/g, "");
+    const cleanNum = (data.phone as string || '').replace(/\s+/g, '');
+    const countryPattern = COUNTRY_PHONE_PATTERNS[signupCountryCode];
     if (!cleanNum) {
-      setError("Veuillez entrer un numéro de téléphone");
+      setError('Please enter a phone number.');
+      setErrorType('invalid');
       setLoading(false);
       return;
-    } else if (!/^(\+41|0041|0)?[1-9]\d{8}$/.test(cleanNum)) {
-      setError("Veuillez entrer un numéro suisse valide (ex: 079 123 45 67)");
+    } else if (countryPattern && !countryPattern.pattern.test(cleanNum)) {
+      setError(`Please enter a valid ${countryPattern.label} phone number (e.g. ${countryPattern.example}).`);
+      setErrorType('invalid');
       setLoading(false);
       return;
     }
@@ -1522,16 +1552,31 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
     try {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, countryCode: signupCountryCode }),
       });
 
       const result = await response.json();
 
+      if (response.status === 409 || result.error === 'Email already in use') {
+        setErrorType('already_exists');
+        setError('already_exists');
+        setLoading(false);
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error(result.error || 'Erreur lors de l\'inscription');
+        setErrorType('generic');
+        setError('generic');
+        setLoading(false);
+        return;
+      }
+
+      if (result.crmStatus === 'already_exists') {
+        setErrorType('already_exists');
+        setError('already_exists');
+        setLoading(false);
+        return;
       }
 
       setSubmitted(true);
@@ -1541,7 +1586,8 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
         navigate('/dashboard');
       }, 2000);
     } catch (err: any) {
-      setError(err.message);
+      setErrorType('generic');
+      setError('generic');
     } finally {
       setLoading(false);
     }
@@ -1654,16 +1700,26 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
               </div>
 
               {error && (
-                <div className="mb-4 text-[14px] text-red-500 font-medium bg-red-50 rounded-xl px-4 py-2">
-                  {error === 'Email already in use' ? 'Email déjà enregistré.' : error}
-                  {error === 'Email already in use' && onSwitchMode && (
-                    <button
-                      type="button"
-                      onClick={() => onSwitchMode('login')}
-                      className="ml-2 underline font-bold"
-                    >
-                      Se connecter avec cet email
-                    </button>
+                <div className="mb-4 text-[14px] font-medium bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                  {errorType === 'already_exists' ? (
+                    <span className="text-amber-700">
+                      It looks like you've already contacted us. Our team will be in touch with you shortly.{' '}
+                      {onSwitchMode && (
+                        <button
+                          type="button"
+                          onClick={() => onSwitchMode('login')}
+                          className="underline font-bold text-amber-800 hover:text-amber-900"
+                        >
+                          Sign in instead
+                        </button>
+                      )}
+                    </span>
+                  ) : errorType === 'invalid' ? (
+                    <span className="text-red-600">{error}</span>
+                  ) : (
+                    <span className="text-red-600">
+                      We were unable to process your registration at this time. Please verify your details and try again.
+                    </span>
                   )}
                 </div>
               )}
@@ -1690,14 +1746,34 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
                   />
                 </motion.div>
                 <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.30 }}>
-                  <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Numéro de Téléphone</label>
-                  <input
-                    name="phone"
-                    type="tel"
-                    required
-                    className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
-                    placeholder="+33 6 00 00 00 00"
-                  />
+                  <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Phone Number</label>
+                  <div className="flex gap-2">
+                    <div className="relative">
+                      <select
+                        id="signup-country-code"
+                        value={signupCountryCode}
+                        onChange={(e) => setSignupCountryCode(e.target.value)}
+                        className="h-full rounded-xl border border-hair bg-[#FAFAFA] pl-3 pr-8 py-3 text-[13px] font-medium outline-none focus:border-[#A78BFA] transition-colors cursor-pointer appearance-none"
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236F6F6F' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'right 8px center',
+                          paddingRight: '28px',
+                        }}
+                      >
+                        {Object.entries(COUNTRY_PHONE_PATTERNS).map(([code, c]) => (
+                          <option key={code} value={code}>{c.flag} +{c.dialCode}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <input
+                      name="phone"
+                      type="tel"
+                      required
+                      className="flex-1 rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:border-[#A78BFA] transition-colors"
+                      placeholder={COUNTRY_PHONE_PATTERNS[signupCountryCode]?.example || '079 123 45 67'}
+                    />
+                  </div>
                 </motion.div>
 
                 <motion.div initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.36 }}>
@@ -1856,6 +1932,8 @@ function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [contactMsg, setContactMsg] = useState<{ type: 'already_exists' | 'generic' | null; text: string } | null>(null);
+  const [contactCountryCode, setContactCountryCode] = useState('CH');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -1864,31 +1942,40 @@ function ContactPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setPhoneError(null);
+    setContactMsg(null);
     
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
 
-    const cleanNum = (data.phone as string || "").replace(/\s+/g, "");
+    const cleanNum = (data.phone as string || '').replace(/\s+/g, '');
+    const countryPattern = COUNTRY_PHONE_PATTERNS[contactCountryCode];
     if (!cleanNum) {
-      setPhoneError("Veuillez entrer un numéro de téléphone");
+      setPhoneError('Please enter a phone number.');
       return;
-    } else if (!/^(\+41|0041|0)?[1-9]\d{8}$/.test(cleanNum)) {
-      setPhoneError("Veuillez entrer un numéro suisse valide (ex: 079 123 45 67)");
+    } else if (countryPattern && !countryPattern.pattern.test(cleanNum)) {
+      setPhoneError(`Please enter a valid ${countryPattern.label} phone number (e.g. ${countryPattern.example}).`);
       return;
     }
 
     setLoading(true);
     try {
-      await fetch('/api/contact', {
+      const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: data.name,
           email: data.email,
           phone: data.phone,
-          message: data.message || "",
+          message: data.message || '',
+          countryCode: contactCountryCode,
         }),
       });
+      const result = await res.json().catch(() => ({}));
+      if (result.crmStatus === 'already_exists') {
+        setContactMsg({ type: 'already_exists', text: "It looks like you've already contacted us. Our team will be in touch with you shortly." });
+        setLoading(false);
+        return;
+      }
     } catch (_) {}
     setLoading(false);
     setSubmitted(true);
@@ -1944,13 +2031,40 @@ function ContactPage() {
                 />
               </div>
               <div>
-                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Numéro de Téléphone</label>
-                <input
-                  name="phone"
-                  type="tel"
-                  className={`w-full rounded-xl border bg-[#FAFAFA] px-4 py-3.5 text-[14px] outline-none transition-colors ${phoneError ? 'border-red-500 focus:border-red-500' : 'border-hair focus:border-[#A78BFA]'}`}
-                  placeholder="+33 6 00 00 00 00"
-                />
+                <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Phone Number</label>
+                {contactMsg && (
+                  <div className={`mb-3 text-[13px] font-medium rounded-xl px-4 py-3 border ${
+                    contactMsg.type === 'already_exists'
+                      ? 'bg-amber-50 border-amber-100 text-amber-700'
+                      : 'bg-red-50 border-red-100 text-red-600'
+                  }`}>{contactMsg.text}</div>
+                )}
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <select
+                      id="contact-page-country-code"
+                      value={contactCountryCode}
+                      onChange={(e) => setContactCountryCode(e.target.value)}
+                      className="h-full rounded-xl border border-hair bg-[#FAFAFA] pl-3 pr-8 py-3.5 text-[13px] font-medium outline-none focus:border-[#A78BFA] transition-colors cursor-pointer appearance-none"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236F6F6F' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 8px center',
+                        paddingRight: '28px',
+                      }}
+                    >
+                      {Object.entries(COUNTRY_PHONE_PATTERNS).map(([code, c]) => (
+                        <option key={code} value={code}>{c.flag} +{c.dialCode}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <input
+                    name="phone"
+                    type="tel"
+                    className={`flex-1 rounded-xl border bg-[#FAFAFA] px-4 py-3.5 text-[14px] outline-none transition-colors ${phoneError ? 'border-red-500 focus:border-red-500' : 'border-hair focus:border-[#A78BFA]'}`}
+                    placeholder={COUNTRY_PHONE_PATTERNS[contactCountryCode]?.example || '079 123 45 67'}
+                  />
+                </div>
                 {phoneError && <p className="text-red-500 text-[12px] mt-1 ml-1">{phoneError}</p>}
               </div>
               <div>
@@ -2226,35 +2340,46 @@ function ContactLeadForm() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [leadMsg, setLeadMsg] = useState<{ type: 'already_exists' | 'generic' | null; text: string } | null>(null);
+  const [leadCountryCode, setLeadCountryCode] = useState('CH');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setPhoneError(null);
+    setLeadMsg(null);
 
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
 
-    const cleanNum = (data.phone as string || "").replace(/\s+/g, "");
+    const cleanNum = (data.phone as string || '').replace(/\s+/g, '');
+    const countryPattern = COUNTRY_PHONE_PATTERNS[leadCountryCode];
     if (!cleanNum) {
-      setPhoneError("Veuillez entrer un numéro de téléphone");
+      setPhoneError('Please enter a phone number.');
       return;
-    } else if (!/^(\+41|0041|0)?[1-9]\d{8}$/.test(cleanNum)) {
-      setPhoneError("Veuillez entrer un numéro suisse valide (ex: 079 123 45 67)");
+    } else if (countryPattern && !countryPattern.pattern.test(cleanNum)) {
+      setPhoneError(`Please enter a valid ${countryPattern.label} phone number (e.g. ${countryPattern.example}).`);
       return;
     }
 
     setLoading(true);
     try {
-      await fetch('/api/contact', {
+      const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: data.name,
           email: data.email,
           phone: data.phone,
-          message: data.message || "",
+          message: data.message || '',
+          countryCode: leadCountryCode,
         }),
       });
+      const result = await res.json().catch(() => ({}));
+      if (result.crmStatus === 'already_exists') {
+        setLeadMsg({ type: 'already_exists', text: "It looks like you've already contacted us. Our team will be in touch with you shortly." });
+        setLoading(false);
+        return;
+      }
     } catch (_) {}
     setLoading(false);
     setSubmitted(true);
@@ -2345,13 +2470,40 @@ function ContactLeadForm() {
               </div>
 
               <div>
-                <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-1.5">Numéro de Téléphone</label>
-                <input
-                  name="phone"
-                  type="tel"
-                  placeholder="+33 6 00 00 00 00"
-                  className={`w-full rounded-xl border bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 transition-all placeholder:text-ink/30 ${phoneError ? 'border-red-500 focus:border-red-500' : 'border-hair focus:border-[#A78BFA]'}`}
-                />
+                <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-1.5">Phone Number</label>
+                {leadMsg && (
+                  <div className={`mb-3 text-[13px] font-medium rounded-xl px-4 py-3 border ${
+                    leadMsg.type === 'already_exists'
+                      ? 'bg-amber-50 border-amber-100 text-amber-700'
+                      : 'bg-red-50 border-red-100 text-red-600'
+                  }`}>{leadMsg.text}</div>
+                )}
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <select
+                      id="lead-form-country-code"
+                      value={leadCountryCode}
+                      onChange={(e) => setLeadCountryCode(e.target.value)}
+                      className="h-full rounded-xl border border-hair bg-[#FAFAFA] pl-3 pr-8 py-3 text-[13px] font-medium outline-none focus:border-[#A78BFA] transition-colors cursor-pointer appearance-none"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236F6F6F' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 8px center',
+                        paddingRight: '28px',
+                      }}
+                    >
+                      {Object.entries(COUNTRY_PHONE_PATTERNS).map(([code, c]) => (
+                        <option key={code} value={code}>{c.flag} +{c.dialCode}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <input
+                    name="phone"
+                    type="tel"
+                    placeholder={COUNTRY_PHONE_PATTERNS[leadCountryCode]?.example || '079 123 45 67'}
+                    className={`flex-1 rounded-xl border bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 transition-all placeholder:text-ink/30 ${phoneError ? 'border-red-500 focus:border-red-500' : 'border-hair focus:border-[#A78BFA]'}`}
+                  />
+                </div>
                 {phoneError && <p className="text-red-500 text-[12px] mt-1">{phoneError}</p>}
               </div>
 
