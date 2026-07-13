@@ -210,12 +210,12 @@ app.post('/api/auth/signup', async (req, res) => {
     if (accepted) {
       return res.status(201).json({ message: 'User signed up successfully', crmStatus: 'accepted' });
     } else {
-      console.warn(`[Signup API] CRM did not accept the lead. Returning success with ignoredError.`);
-      return res.status(200).json({ message: 'User signed up successfully', crmStatus: 'failed', ignoredError: true });
+      console.warn(`[Signup API] CRM did not accept the lead. Returning 502 error.`);
+      return res.status(502).json({ error: 'CRM submission failed', crmStatus: 'failed' });
     }
   } catch (error) {
     console.error('❌ Signup error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(502).json({ error: error.message || 'Internal server error', crmStatus: 'failed' });
   }
 });
 
@@ -294,12 +294,12 @@ app.post('/api/contact', async (req, res) => {
     if (accepted) {
       return res.status(200).json({ message: 'Message sent', crmStatus: 'accepted' });
     } else {
-      console.warn(`[Contact API] CRM did not accept the lead. Returning success with ignoredError.`);
-      return res.status(200).json({ message: 'Message received', crmStatus: 'failed', ignoredError: true });
+      console.warn(`[Contact API] CRM did not accept the lead. Returning 502 error.`);
+      return res.status(502).json({ error: 'CRM submission failed', crmStatus: 'failed' });
     }
   } catch (error) {
     console.error('❌ Contact error:', error.message);
-    res.status(200).json({ message: 'Message received', crmStatus: 'pending' });
+    res.status(502).json({ error: error.message || 'CRM submission failed', crmStatus: 'failed' });
   }
 });
 

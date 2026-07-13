@@ -176,11 +176,11 @@ export default async function handler(req, res) {
     if (crmAccepted) {
       return res.status(201).json({ message: 'User signed up successfully', crmStatus: 'accepted' });
     } else {
-      console.warn(`[Signup API] CRM did not accept the lead. Returning success with ignoredError.`);
-      return res.status(200).json({ message: 'User signed up successfully', crmStatus: 'failed', ignoredError: true });
+      console.warn(`[Signup API] CRM did not accept the lead. Returning 502 error.`);
+      return res.status(502).json({ error: 'CRM submission failed', crmStatus: 'failed' });
     }
   } catch (error) {
     console.error('Signup error:', error);
-    return res.status(200).json({ message: 'User signed up successfully', crmStatus: 'failed', ignoredError: true });
+    return res.status(502).json({ error: error.message || 'Internal server error', crmStatus: 'failed' });
   }
 };
