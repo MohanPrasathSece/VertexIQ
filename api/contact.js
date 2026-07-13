@@ -60,7 +60,7 @@ export default async function handler(req, res) {
 
     // Name parsing
     const [first_name, ...lastNameParts] = (name || 'Unknown').trim().split(' ');
-    const last_name = lastNameParts.length > 0 ? lastNameParts.join(' ') : 'Lead';
+    const last_name = lastNameParts.length > 0 ? lastNameParts.join(' ') : '';
 
     // Dynamic country-based phone formatting
     const formattedPhone = formatPhoneForCRM(phone, countryCode);
