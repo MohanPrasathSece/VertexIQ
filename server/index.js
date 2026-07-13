@@ -4,7 +4,6 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
-const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = 3001;
@@ -13,33 +12,6 @@ app.use(cors());
 app.use(express.json());
 
 const EXCEL_FILE_PATH = path.join(__dirname, 'users.xlsx');
-const ADMIN_EMAIL = process.env.GMAIL_USER;
-
-// ---- SMTP transporter (Gmail) ----
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000,
-});
-
-async function sendEmail({ to, subject, html }) {
-  return transporter.sendMail({
-    from: `"VertexIQ" <${process.env.GMAIL_USER}>`,
-    to,
-    subject,
-    html,
-  });
-}
 
 // ---- CRM Helper ----
 async function pushLeadToCRM(user, description = "VertexIQ Signup") {
@@ -93,8 +65,9 @@ async function getDatabase() {
   try {
     const { blobs } = await list({ prefix: 'database.json', token: BLOB_TOKEN });
     if (blobs.length > 0) {
-      const res = await fetch(blobs[0].url, {
-        headers: { Authorization: `Bearer ${BLOB_TOKEN}` }
+      const res = await fetch(`${blobs[0].url}?ts=${Date.now()}`, {
+        headers: { Authorization: `Bearer ${BLOB_TOKEN}` },
+        cache: 'no-store'
       });
       if (res.ok) return await res.json();
     }
@@ -110,7 +83,8 @@ async function saveDatabase(users) {
     await put('database.json', JSON.stringify(users, null, 2), {
       access: 'private',
       token: BLOB_TOKEN,
-      addRandomSuffix: false
+      addRandomSuffix: false,
+      allowOverwrite: true
     });
     return true;
   } catch (err) {
@@ -133,24 +107,6 @@ app.post('/api/auth/signup', async (req, res) => {
 
     users.push({ name, email, phone: phone || '', createdAt: new Date().toISOString() });
     await saveDatabase(users);
-
-    // Admin notification — fire and forget (don't fail signup if email fails)
-    sendEmail({
-      to: ADMIN_EMAIL,
-      subject: '🚀 Nouvel inscrit VertexIQ',
-      html: `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#f9f9f9;border-radius:12px;overflow:hidden">
-          <div style="background:linear-gradient(135deg,#A78BFA,#7C3AED);padding:24px;text-align:center">
-            <h1 style="color:white;margin:0;font-size:22px">Nouvel Inscrit VertexIQ</h1>
-          </div>
-          <div style="padding:24px">
-            <p><strong>Nom:</strong> ${name}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Téléphone:</strong> ${phone || 'Non renseigné'}</p>
-            <p style="color:#999;font-size:12px;margin-top:24px">Inscrit le ${new Date().toLocaleString('fr-FR')}</p>
-          </div>
-        </div>`,
-    }).catch(err => console.warn('⚠️  Email failed (likely firewall):', err.message));
 
     // Push to CRM — fire and forget
     pushLeadToCRM({ name, email, phone }, "VertexIQ Signup").catch(() => {});
@@ -213,47 +169,20 @@ app.get('/api/database/download', async (req, res) => {
 app.post('/api/contact', async (req, res) => {
   try {
     const { name, message, email, subject } = req.body;
-    if (!name || !message) return res.status(400).json({ error: 'Nom et message requis' });
+    if (!name) return res.status(400).json({ error: 'Nom requis' });
 
-    await sendEmail({
-      to: ADMIN_EMAIL,
-      subject: `📩 Contact VertexIQ${subject ? ' — ' + subject : ''}`,
-      html: `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#f9f9f9;border-radius:12px;overflow:hidden">
-          <div style="background:linear-gradient(135deg,#A78BFA,#7C3AED);padding:24px;text-align:center">
-            <h1 style="color:white;margin:0;font-size:22px">Nouveau Message de Contact</h1>
-          </div>
-          <div style="padding:24px">
-            <p><strong>Nom:</strong> ${name}</p>
-            ${email ? `<p><strong>Email:</strong> ${email}</p>` : ''}
-            ${subject ? `<p><strong>Sujet:</strong> ${subject}</p>` : ''}
-            <p><strong>Message:</strong></p>
-            <blockquote style="border-left:4px solid #A78BFA;margin:0;padding:12px 16px;background:#fff;border-radius:8px;color:#444">${message}</blockquote>
-            <p style="color:#999;font-size:12px;margin-top:24px">Envoyé le ${new Date().toLocaleString('fr-FR')}</p>
-          </div>
-        </div>`,
-    });
+    const msgContent = message || '';
 
     // Push to CRM — fire and forget
-    pushLeadToCRM({ name, email, phone: req.body.phone, message }, "VertexIQ Contact Form").catch(() => {});
+    pushLeadToCRM({ name, email, phone: req.body.phone, message: msgContent }, "VertexIQ Contact Form").catch(() => {});
 
     res.status(200).json({ message: 'Message sent' });
   } catch (error) {
     console.error('Contact email error:', error.message);
-    // Still return success to user — email failure shouldn't block them
     res.status(200).json({ message: 'Message received' });
   }
 });
 
 app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
-  // Verify SMTP on startup
-  transporter.verify((err) => {
-    if (err) {
-      console.warn('⚠️  SMTP not reachable (firewall?):', err.message);
-      console.warn('   Emails will be skipped locally. Works fine on Vercel/production.');
-    } else {
-      console.log('📧 SMTP connected — emails active');
-    }
-  });
 });

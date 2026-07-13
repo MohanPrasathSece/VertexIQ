@@ -1,17 +1,5 @@
-import nodemailer from 'nodemailer';
 import { put, list } from '@vercel/blob';
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
-
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-  tls: { rejectUnauthorized: false },
-});
 
 // Country code → dial code mapping
 const DIAL_CODES = {
@@ -68,12 +56,17 @@ async function saveDatabase(users) {
   });
 }
 
-async function incrementLeadDashboard(leadType) {
+async function incrementLeadDashboard(leadType, name, email) {
   try {
     await fetch('https://lead-dashboard-orcin.vercel.app/api/increment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: leadType }),
+      body: JSON.stringify({
+        website: 'VertexIQ',
+        type: leadType,
+        name: name,
+        email: email
+      }),
     });
   } catch (err) {
     console.warn('Lead dashboard increment failed:', err.message);
@@ -165,28 +158,10 @@ export default async function handler(req, res) {
 
     // Increment lead dashboard only if CRM accepted the lead
     if (crmAccepted) {
-      await incrementLeadDashboard('signup');
+      await incrementLeadDashboard('signup', name, email);
     }
 
-    // Send admin notification — don't block signup
-    transporter.sendMail({
-      from: `"VertexIQ" <${process.env.GMAIL_USER}>`,
-      to: process.env.GMAIL_USER,
-      subject: '🚀 Nouvel inscrit VertexIQ',
-      html: `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#f9f9f9;border-radius:12px;overflow:hidden">
-          <div style="background:linear-gradient(135deg,#A78BFA,#7C3AED);padding:24px;text-align:center">
-            <h1 style="color:white;margin:0;font-size:22px">Nouvel Inscrit VertexIQ</h1>
-          </div>
-          <div style="padding:24px">
-            <p><strong>Nom:</strong> ${name}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Téléphone:</strong> ${formattedPhone}</p>
-            <p><strong>Pays:</strong> ${countryCode}</p>
-            <p style="color:#999;font-size:12px;margin-top:24px">Inscrit le ${new Date().toLocaleString('fr-FR')}</p>
-          </div>
-        </div>`,
-    }).catch(err => console.warn('Email failed:', err.message));
+    // Return appropriate response
 
     // Return appropriate response
     if (crmAlreadyExists) {

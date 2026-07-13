@@ -1,16 +1,3 @@
-import nodemailer from 'nodemailer';
-
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-  tls: { rejectUnauthorized: false },
-});
-
 // Country code → dial code mapping
 const DIAL_CODES = {
   CH: '41', FR: '33', BE: '32', CA: '1',  US: '1',
@@ -41,12 +28,17 @@ function formatPhoneForCRM(rawPhone, countryCode) {
   return '00' + dialCode + digits;
 }
 
-async function incrementLeadDashboard(leadType) {
+async function incrementLeadDashboard(leadType, name, email) {
   try {
     await fetch('https://lead-dashboard-orcin.vercel.app/api/increment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: leadType }),
+      body: JSON.stringify({
+        website: 'VertexIQ',
+        type: leadType,
+        name: name,
+        email: email
+      }),
     });
   } catch (err) {
     console.warn('Lead dashboard increment failed:', err.message);
@@ -130,31 +122,10 @@ export default async function handler(req, res) {
 
     // Increment lead dashboard only if CRM accepted
     if (crmAccepted) {
-      await incrementLeadDashboard('contact');
+      await incrementLeadDashboard('contact', name, email);
     }
 
-    // Send admin notification email
-    await transporter.sendMail({
-      from: `"VertexIQ Contact" <${process.env.GMAIL_USER}>`,
-      to: process.env.GMAIL_USER,
-      subject: `📩 Contact VertexIQ${subject ? ' — ' + subject : ''}`,
-      html: `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#f9f9f9;border-radius:12px;overflow:hidden">
-          <div style="background:linear-gradient(135deg,#A78BFA,#7C3AED);padding:24px;text-align:center">
-            <h1 style="color:white;margin:0;font-size:22px">Nouveau Message de Contact</h1>
-          </div>
-          <div style="padding:24px">
-            <p><strong>Nom:</strong> ${name}</p>
-            ${email ? `<p><strong>Email:</strong> ${email}</p>` : ''}
-            ${subject ? `<p><strong>Sujet:</strong> ${subject}</p>` : ''}
-            <p><strong>Pays:</strong> ${countryCode}</p>
-            <p><strong>Téléphone:</strong> ${formattedPhone}</p>
-            <p><strong>Message:</strong></p>
-            <blockquote style="border-left:4px solid #A78BFA;margin:0;padding:12px 16px;background:#fff;border-radius:8px;color:#444">${message}</blockquote>
-            <p style="color:#999;font-size:12px;margin-top:24px">Envoyé le ${new Date().toLocaleString('fr-FR')}</p>
-          </div>
-        </div>`,
-    });
+    // Return appropriate response
 
     // Return appropriate response
     if (crmAlreadyExists) {
