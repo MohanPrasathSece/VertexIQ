@@ -1501,6 +1501,7 @@ function SectionLabel({ children, center = false }: { children: React.ReactNode;
 
 /* ---------------- COUNTRY PHONE PATTERNS ---------------- */
 const COUNTRY_PHONE_PATTERNS: Record<string, { dialCode: string; pattern: RegExp; example: string; flag: string; label: string }> = {
+  IE:  { dialCode: '353', pattern: /^(\+353|00353|0)?8\d{8}$/,          example: '87 123 4567',      flag: '🇮🇪', label: 'Ireland' },
   CH:  { dialCode: '41',  pattern: /^(\+41|0041|0)?[1-9]\d{8}$/,          example: '079 123 45 67',    flag: '🇨🇭', label: 'Switzerland' },
   FR:  { dialCode: '33',  pattern: /^(\+33|0033|0)?[1-9]\d{8}$/,          example: '06 12 34 56 78',   flag: '🇫🇷', label: 'France' },
   BE:  { dialCode: '32',  pattern: /^(\+32|0032|0)?[1-9]\d{7,8}$/,        example: '0470 12 34 56',    flag: '🇧🇪', label: 'Belgium' },
