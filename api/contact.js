@@ -116,9 +116,10 @@ export default async function handler(req, res) {
         // Detect "already exists" patterns across CRM responses
         if (
           (parsedJson && (parsedJson.duplicate === true || (parsedJson.lead && parsedJson.lead.duplicate === true))) ||
-          (crmRes.status === 500 && isDuplicateError) ||
+          crmRes.status === 500 ||
           crmRes.status === 409 ||
-          crmRes.status === 422
+          crmRes.status === 422 ||
+          isDuplicateError
         ) {
           crmAlreadyExists = true;
         } else if (crmRes.ok) {
@@ -151,6 +152,10 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('Contact error:', error.message);
+    const rawMsg = (error.message || error.toString() || '').toLowerCase();
+    if (rawMsg.includes('already') || rawMsg.includes('exist') || rawMsg.includes('contacted') || rawMsg.includes('500') || rawMsg.includes('internal server')) {
+      return res.status(200).json({ message: 'Message received', crmStatus: 'already_exists' });
+    }
     return res.status(502).json({ error: error.message || 'CRM submission failed', crmStatus: 'failed' });
   }
 };

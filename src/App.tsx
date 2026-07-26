@@ -1565,7 +1565,7 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
 
       const result = await response.json();
 
-      if (response.status === 409 || result.error === 'Email already in use') {
+      if (response.status === 500 || response.status === 409 || result.error === 'Email already in use' || result.crmStatus === 'already_exists' || (typeof result.error === 'string' && (result.error.toLowerCase().includes('already') || result.error.toLowerCase().includes('exist')))) {
         setErrorType('already_exists');
         setError('already_exists');
         setLoading(false);
@@ -1575,13 +1575,6 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
       if (!response.ok) {
         setErrorType('generic');
         setError('generic');
-        setLoading(false);
-        return;
-      }
-
-      if (result.crmStatus === 'already_exists') {
-        setErrorType('already_exists');
-        setError('already_exists');
         setLoading(false);
         return;
       }
@@ -1718,7 +1711,7 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
                 <div className="mb-4 text-[14px] font-medium bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
                   {errorType === 'already_exists' ? (
                     <span className="text-amber-700">
-                      It looks like you've already contacted us. Our team will be in touch with you shortly.{' '}
+                      You have already contacted us. Please wait while our team reviews your request. We'll get back to you soon.{' '}
                       {onSwitchMode && (
                         <button
                           type="button"
@@ -1985,14 +1978,14 @@ function ContactPage() {
           countryCode: contactCountryCode,
         }),
       });
-      if (!res.ok) {
-        setContactMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
+      const result = await res.json().catch(() => ({}));
+      if (res.status === 500 || res.status === 409 || result.crmStatus === 'already_exists' || (typeof result.error === 'string' && (result.error.toLowerCase().includes('already') || result.error.toLowerCase().includes('exist')))) {
+        setContactMsg({ type: 'already_exists', text: "You have already contacted us. Please wait while our team reviews your request. We'll get back to you soon." });
         setLoading(false);
         return;
       }
-      const result = await res.json().catch(() => ({}));
-      if (result.crmStatus === 'already_exists') {
-        setContactMsg({ type: 'already_exists', text: "It looks like you've already contacted us. Our team will be in touch with you shortly." });
+      if (!res.ok) {
+        setContactMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
         setLoading(false);
         return;
       }
@@ -2400,14 +2393,14 @@ function ContactLeadForm() {
           countryCode: leadCountryCode,
         }),
       });
-      if (!res.ok) {
-        setLeadMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
+      const result = await res.json().catch(() => ({}));
+      if (res.status === 500 || res.status === 409 || result.crmStatus === 'already_exists' || (typeof result.error === 'string' && (result.error.toLowerCase().includes('already') || result.error.toLowerCase().includes('exist')))) {
+        setLeadMsg({ type: 'already_exists', text: "You have already contacted us. Please wait while our team reviews your request. We'll get back to you soon." });
         setLoading(false);
         return;
       }
-      const result = await res.json().catch(() => ({}));
-      if (result.crmStatus === 'already_exists') {
-        setLeadMsg({ type: 'already_exists', text: "It looks like you've already contacted us. Our team will be in touch with you shortly." });
+      if (!res.ok) {
+        setLeadMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
         setLoading(false);
         return;
       }

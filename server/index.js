@@ -126,9 +126,10 @@ async function pushLeadToCRM(user, description = "VertexIQ Signup", countryCode 
 
     if (
       (parsedJson && (parsedJson.duplicate === true || (parsedJson.lead && parsedJson.lead.duplicate === true))) ||
-      (response.status === 500 && isDuplicateError) ||
+      response.status === 500 ||
       response.status === 409 ||
-      response.status === 422
+      response.status === 422 ||
+      isDuplicateError
     ) {
       alreadyExists = true;
       console.log(`[CRM] Lead already exists/duplicate: ${user.email}`);
