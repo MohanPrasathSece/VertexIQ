@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     const challenge = req.query["hub.challenge"];
 
     // The verify token we want to use (can be overridden by environment variable)
-    const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || "CapitalChronicleWebhookToken2026";
+    const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || "AutoDigixWebhookVerifyToken2026";
 
     if (mode && token) {
       if (mode === "subscribe" && token === VERIFY_TOKEN) {
