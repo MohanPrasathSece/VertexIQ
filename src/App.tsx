@@ -1945,6 +1945,8 @@ function ContactPage() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    trackPixelEvent("PageView");
+    trackPixelEvent("Contact", { content_name: "VertexIQ Contact Page" });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -1990,6 +1992,10 @@ function ContactPage() {
         return;
       }
       trackPixelEvent("Lead", {
+        content_name: "VertexIQ Contact Form",
+        email: data.email
+      });
+      trackPixelEvent("Contact", {
         content_name: "VertexIQ Contact Form",
         email: data.email
       });
