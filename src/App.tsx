@@ -687,90 +687,109 @@ function LogoCarousel() {
 }
 
 function DashboardMockup() {
-  const { seats } = useUrgencySeats();
+  const { seats, totalSeats } = useUrgencySeats();
+  const percentage = Math.min(95, Math.max(25, Math.round(((totalSeats - seats) / totalSeats) * 100)));
 
   return (
     <div className="relative w-full h-full flex items-center justify-center">
       {/* glow */}
-      <div className="absolute inset-8 rounded-[40px] bg-grad-lavender blur-2xl opacity-80 transform-gpu" style={{ willChange: 'transform' }} />
+      <div className="absolute inset-4 sm:inset-8 rounded-[40px] bg-grad-lavender blur-2xl opacity-80 transform-gpu" style={{ willChange: 'transform' }} />
 
       {/* main card (big white box) */}
-      <div className="w-[90%] max-w-[460px] rounded-[28px] bg-white border border-hair shadow-float p-5 sm:p-7 relative z-10">
-        
-        {/* Live Urgency Status inside the Big White Box */}
-        <div className="mb-5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-red-500/10 via-amber-500/10 to-[#A78BFA]/10 border border-red-500/20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6 }}
+        className="w-[94%] max-w-[480px] rounded-[32px] bg-white border border-hair shadow-float p-6 sm:p-8 relative z-10"
+      >
+        {/* Top Status Header */}
+        <div className="flex items-center justify-between border-b border-hair pb-4">
+          <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200/80 px-3 py-1 rounded-full">
             <span className="relative flex size-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
               <span className="relative inline-flex rounded-full size-2.5 bg-red-500" />
             </span>
-            <span className="text-[12px] font-semibold text-ink flex items-center gap-1.5">
-              <Flame className="size-3.5 text-red-500 fill-red-500 animate-pulse" />
-              Places Restantes :
+            <span className="text-[11px] font-bold text-red-700 uppercase tracking-wider">
+              Accès Limité
             </span>
           </div>
-          <div className="flex items-center gap-1.5 font-display text-[13px] font-semibold text-ink">
-            <span className="text-muted2 text-[12px]">Plus que</span>
+          <div className="flex items-center gap-1.5 text-muted2 text-[12px] font-medium">
+            <Flame className="size-4 text-red-500 fill-red-500 animate-pulse" />
+            <span>Forte Demande</span>
+          </div>
+        </div>
+
+        {/* Big Urgency Seats Display */}
+        <div className="my-7 text-center">
+          <div className="text-[12px] uppercase tracking-[0.18em] font-semibold text-muted2 mb-2">
+            Disponibilité Actuelle
+          </div>
+          <div className="flex items-center justify-center gap-3">
             <AnimatePresence mode="popLayout">
               <motion.span
                 key={seats}
-                initial={{ opacity: 0, y: -6, scale: 1.2 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 6 }}
-                transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                className="font-extrabold text-red-600 bg-red-100 border border-red-200 px-2 py-0.5 rounded-md text-[14px]"
+                initial={{ opacity: 0, scale: 0.8, y: -16 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 16 }}
+                transition={{ type: "spring", stiffness: 320, damping: 22 }}
+                className="font-display font-black text-[72px] sm:text-[88px] leading-none text-red-600 tracking-tight"
               >
                 {seats}
               </motion.span>
             </AnimatePresence>
-            <span className="text-muted2 text-[12px]">places</span>
+            <div className="text-left font-display font-bold leading-tight text-ink">
+              <span className="block text-[20px] sm:text-[24px]">Places</span>
+              <span className="block text-[13px] sm:text-[15px] text-muted2 font-normal">Restantes</span>
+            </div>
+          </div>
+          <p className="mt-3 text-[13px] sm:text-[14px] text-muted2 max-w-xs mx-auto leading-relaxed">
+            Attribution des accès en temps réel. Les réservations sont traitées par ordre d'arrivée.
+          </p>
+        </div>
+
+        {/* Reservation Progress Bar */}
+        <div className="rounded-2xl bg-[#FAFAFA] border border-hair p-4 space-y-2.5">
+          <div className="flex items-center justify-between text-[12px] font-semibold">
+            <span className="text-ink">Progression des inscriptions</span>
+            <span className="text-red-600 font-bold">{percentage}% réservé</span>
+          </div>
+          <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden p-0.5">
+            <motion.div
+              initial={{ width: "0%" }}
+              animate={{ width: `${percentage}%` }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
+              className="h-full rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-500"
+            />
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.18em] text-muted2">
-              Aperçu Plateforme
-            </div>
-            <div className="mt-1 font-display font-bold text-[22px]">
-              Performance
-            </div>
+        {/* Feature Checkpoints */}
+        <div className="mt-5 space-y-2">
+          <div className="flex items-center gap-2.5 text-[13px] text-ink font-medium">
+            <CheckCircle2 className="size-4 text-[#22C55E] flex-shrink-0" />
+            <span>Accès prioritaire à l'intelligence de marché IA</span>
           </div>
-          <div className="size-10 rounded-full bg-grad-lavender flex items-center justify-center">
-            <Sparkles className="size-4 text-[#6F4FD0]" />
+          <div className="flex items-center gap-2.5 text-[13px] text-ink font-medium">
+            <CheckCircle2 className="size-4 text-[#22C55E] flex-shrink-0" />
+            <span>Consultation stratégique personnalisée 1-sur-1</span>
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl bg-[#FAFAFA] border border-hair p-4">
-          <div className="flex items-end justify-between">
-            <div>
-              <div className="text-[12px] text-muted2">Précision IA</div>
-              <div className="font-display font-bold text-[24px] sm:text-[28px] leading-none mt-1">
-                94.8%
-              </div>
-            </div>
-            <div className="text-[12px] font-medium text-[#0E7C4A] flex items-center gap-1">
-              <TrendingUp className="size-3.5" /> +18.2%
-            </div>
-          </div>
-          <Sparkline />
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <MetricMini label="Performance des Signaux" value="89/100" trend="+9" />
-          <MetricMini label="Efficacité Automation" value="96%" trend="+14" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MetricMini({ label, value, trend }: { label: string; value: string; trend: string }) {
-  return (
-    <div className="rounded-xl border border-hair p-3">
-      <div className="text-[11px] text-muted2">{label}</div>
-      <div className="font-display font-bold text-[16px] mt-1">{value}</div>
-      <div className="text-[11px] text-[#0E7C4A]">{trend}</div>
+        {/* Reserve button inside card */}
+        <Link to="/contact" className="block mt-6">
+          <Magnetic className="w-full">
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              className="group relative w-full py-4 rounded-2xl bg-[#111111] text-white font-display font-bold text-[14px] sm:text-[15px] flex items-center justify-center gap-2 overflow-hidden shadow-lg shadow-black/15"
+            >
+              <span className="relative z-10">Réserver ma Place</span>
+              <ArrowRight className="relative z-10 size-4 transition-transform group-hover:translate-x-1" />
+              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            </motion.button>
+          </Magnetic>
+        </Link>
+      </motion.div>
     </div>
   );
 }
@@ -801,6 +820,7 @@ function Sparkline() {
     </svg>
   );
 }
+
 
 /* ---------------- PROBLEM ---------------- */
 function Problem() {
