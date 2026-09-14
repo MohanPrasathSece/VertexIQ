@@ -601,11 +601,7 @@ function Hero() {
             VertexIQ combine l'intelligence artificielle avancée, l'analyse en temps réel et l'intelligence de marché automatisée pour aider les traders à identifier les opportunités, réduire la complexité et prendre des décisions basées sur les données en toute confiance.
           </motion.p>
 
-          <motion.div variants={fadeUp} className="mt-6">
-            <HeroUrgencyBadge />
-          </motion.div>
-
-          <motion.div variants={fadeUp} className="mt-6">
+          <motion.div variants={fadeUp} className="mt-8">
             <Link to="/contact">
               <Magnetic>
                 <motion.button
@@ -632,7 +628,7 @@ function Hero() {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
-          className="lg:col-span-6 relative h-[420px] sm:h-[560px] lg:h-[640px]"
+          className="lg:col-span-6 relative h-[450px] sm:h-[580px] lg:h-[650px] flex items-center justify-center"
           style={{ willChange: "transform" }}
         >
           <DashboardMockup />
@@ -691,9 +687,19 @@ function LogoCarousel() {
 
 function DashboardMockup() {
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
+    <div className="relative w-full h-full flex flex-col items-center justify-center">
       {/* glow */}
       <div className="absolute inset-8 rounded-[40px] bg-grad-lavender blur-2xl opacity-80 transform-gpu" style={{ willChange: 'transform' }} />
+
+      {/* Urgency Badge placed on Right Container */}
+      <motion.div 
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+        className="mb-3.5 z-20"
+      >
+        <HeroUrgencyBadge />
+      </motion.div>
 
       {/* main card */}
       <div className="w-[90%] max-w-[460px] rounded-[28px] bg-white border border-hair shadow-float p-5 sm:p-7 relative z-10">
