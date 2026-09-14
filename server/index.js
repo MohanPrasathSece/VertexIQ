@@ -294,7 +294,7 @@ app.get('/api/database/download', async (req, res) => {
   }
 });
 
-const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || process.env.TURNSTILE_SECRET_KEY || '6LeTTLstAAAAAEFOxv4nGhX-GanXxi8pRSl0uDP0';
+const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || process.env.TURNSTILE_SECRET_KEY || '6LfgT7stAAAAAGEQqyaaBt8fAZCj9qlA-fnbNPhv';
 
 async function verifyRecaptcha(token, ip) {
   if (!token) return false;

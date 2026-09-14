@@ -35,7 +35,7 @@ interface RecaptchaWidgetProps {
 
 const RECAPTCHA_SITE_KEY =
   (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_RECAPTCHA_SITE_KEY || import.meta.env.VITE_TURNSTILE_SITE_KEY)) ||
-  '6LeTTLstAAAAACeD3rjua00cIVfmS2DNyMssR0tF';
+  '6LfgT7stAAAAAEE0s2_tngDonSeaNmch9r56wAdk';
 
 export const RecaptchaWidget = forwardRef<RecaptchaHandle, RecaptchaWidgetProps>(
   ({ onVerify, onExpire, onError, theme = 'light', className = '' }, ref) => {
