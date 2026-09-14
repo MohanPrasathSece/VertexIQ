@@ -94,9 +94,7 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, TurnstileWidgetProps>
 
       const initTurnstile = () => {
         if (window.turnstile && typeof window.turnstile.render === 'function') {
-          window.turnstile.ready(() => {
-            if (isMounted) renderWidget();
-          });
+          renderWidget();
         } else {
           let attempts = 0;
           checkInterval = setInterval(() => {
