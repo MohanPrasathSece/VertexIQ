@@ -30,6 +30,7 @@ import {
   Zap,
   TrendingDown,
   BarChart2,
+  Flame,
 } from "lucide-react";
 import {
   motion,
@@ -43,7 +44,7 @@ import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom"
 import { ResponsiveContainer, LineChart as RechartsLineChart, Line, YAxis, XAxis, Tooltip, CartesianGrid } from 'recharts';
 import { trackPixelEvent } from "@/lib/pixel";
 import { TurnstileWidget, type TurnstileHandle } from "@/components/TurnstileWidget";
-import { HeroUrgencyBadge } from "@/components/UrgencySeatsBadge";
+import { HeroUrgencyBadge, useUrgencySeats } from "@/components/UrgencySeatsBadge";
 
 /* ---------------- MOTION HELPERS ---------------- */
 const fadeUp: Variants = {
@@ -686,23 +687,46 @@ function LogoCarousel() {
 }
 
 function DashboardMockup() {
+  const { seats } = useUrgencySeats();
+
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center">
+    <div className="relative w-full h-full flex items-center justify-center">
       {/* glow */}
       <div className="absolute inset-8 rounded-[40px] bg-grad-lavender blur-2xl opacity-80 transform-gpu" style={{ willChange: 'transform' }} />
 
-      {/* Urgency Badge placed on Right Container */}
-      <motion.div 
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-        className="mb-3.5 z-20"
-      >
-        <HeroUrgencyBadge />
-      </motion.div>
-
-      {/* main card */}
+      {/* main card (big white box) */}
       <div className="w-[90%] max-w-[460px] rounded-[28px] bg-white border border-hair shadow-float p-5 sm:p-7 relative z-10">
+        
+        {/* Live Urgency Status inside the Big White Box */}
+        <div className="mb-5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-red-500/10 via-amber-500/10 to-[#A78BFA]/10 border border-red-500/20 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="relative flex size-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+              <span className="relative inline-flex rounded-full size-2.5 bg-red-500" />
+            </span>
+            <span className="text-[12px] font-semibold text-ink flex items-center gap-1.5">
+              <Flame className="size-3.5 text-red-500 fill-red-500 animate-pulse" />
+              Places Restantes :
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 font-display text-[13px] font-semibold text-ink">
+            <span className="text-muted2 text-[12px]">Plus que</span>
+            <AnimatePresence mode="popLayout">
+              <motion.span
+                key={seats}
+                initial={{ opacity: 0, y: -6, scale: 1.2 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                className="font-extrabold text-red-600 bg-red-100 border border-red-200 px-2 py-0.5 rounded-md text-[14px]"
+              >
+                {seats}
+              </motion.span>
+            </AnimatePresence>
+            <span className="text-muted2 text-[12px]">places</span>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
           <div>
             <div className="text-[11px] uppercase tracking-[0.18em] text-muted2">
@@ -710,7 +734,8 @@ function DashboardMockup() {
             </div>
             <div className="mt-1 font-display font-bold text-[22px]">
               Performance
-            </div>          </div>
+            </div>
+          </div>
           <div className="size-10 rounded-full bg-grad-lavender flex items-center justify-center">
             <Sparkles className="size-4 text-[#6F4FD0]" />
           </div>
