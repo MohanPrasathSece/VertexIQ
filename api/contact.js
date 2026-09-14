@@ -45,6 +45,29 @@ async function incrementLeadDashboard(leadType, name, email) {
   }
 }
 
+const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY || '0x4AAAAAAEz2IqaTH1LFxJKv1LAjbXnT-pQ';
+
+async function verifyTurnstile(token, ip) {
+  if (!token) return false;
+  try {
+    const formData = new URLSearchParams();
+    formData.append('secret', TURNSTILE_SECRET_KEY);
+    formData.append('response', token);
+    if (ip) formData.append('remoteip', ip);
+
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    console.log('[Turnstile] Verification result:', data);
+    return data.success === true;
+  } catch (err) {
+    console.error('Turnstile verification error:', err);
+    return false;
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -53,7 +76,17 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { name, message, email, phone, subject, countryCode = 'CH' } = req.body;
+    const { name, message, email, phone, subject, countryCode = 'CH', turnstileToken } = req.body;
+
+    // Validate Turnstile Captcha
+    if (turnstileToken) {
+      const clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress;
+      const isHuman = await verifyTurnstile(turnstileToken, clientIp);
+      if (!isHuman) {
+        return res.status(400).json({ error: 'Échec de vérification du Captcha Cloudflare Turnstile. Veuillez réessayer.' });
+      }
+    }
+
     if (!name) {
       return res.status(400).json({ error: 'Nom requis' });
     }

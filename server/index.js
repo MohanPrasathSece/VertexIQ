@@ -294,10 +294,33 @@ app.get('/api/database/download', async (req, res) => {
   }
 });
 
+const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY || '0x4AAAAAAEz2IqaTH1LFxJKv1LAjbXnT-pQ';
+
+async function verifyTurnstile(token, ip) {
+  if (!token) return false;
+  try {
+    const formData = new URLSearchParams();
+    formData.append('secret', TURNSTILE_SECRET_KEY);
+    formData.append('response', token);
+    if (ip) formData.append('remoteip', ip);
+
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    console.log('[Turnstile Server] Verification result:', data);
+    return data.success === true;
+  } catch (err) {
+    console.error('Turnstile verification error on server:', err);
+    return false;
+  }
+}
+
 // ---- Contact form ----
 app.post('/api/contact', async (req, res) => {
   try {
-    const { name, message, email, phone, subject, countryCode = 'CH' } = req.body;
+    const { name, message, email, phone, subject, countryCode = 'CH', turnstileToken } = req.body;
     console.log(`\n--- [Contact API Request] ---`);
     console.log(`Name: ${name}`);
     console.log(`Email: ${email}`);
@@ -306,8 +329,16 @@ app.post('/api/contact', async (req, res) => {
     console.log(`CountryCode: ${countryCode}`);
     console.log(`Message: ${message || ''}`);
 
+    if (turnstileToken) {
+      const clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress;
+      const isHuman = await verifyTurnstile(turnstileToken, clientIp);
+      if (!isHuman) {
+        console.warn(`[Turnstile Warning] Verification failed for token.`);
+        return res.status(400).json({ error: 'Échec de vérification du Captcha Cloudflare Turnstile.' });
+      }
+    }
+
     if (!name) {
-      console.warn(`[Contact API Warning] Rejected: Missing name.`);
       return res.status(400).json({ error: 'Nom requis' });
     }
 

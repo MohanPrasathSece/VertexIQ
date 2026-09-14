@@ -42,6 +42,8 @@ import { useRef, useState, useEffect, useCallback, type ReactNode, type MouseEve
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { ResponsiveContainer, LineChart as RechartsLineChart, Line, YAxis, XAxis, Tooltip, CartesianGrid } from 'recharts';
 import { trackPixelEvent } from "@/lib/pixel";
+import { TurnstileWidget, type TurnstileHandle } from "@/components/TurnstileWidget";
+import { HeroUrgencyBadge } from "@/components/UrgencySeatsBadge";
 
 /* ---------------- MOTION HELPERS ---------------- */
 const fadeUp: Variants = {
@@ -349,7 +351,7 @@ function PaymentSuccessFlash({ show }: { show: boolean }) {
   );
 }
 
-function Home({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void }) {
+function Home() {
   const location = useLocation();
   
   useEffect(() => {
@@ -366,7 +368,7 @@ function Home({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void
   return (
     <>
       <FadeSection>
-        <Hero onSignUp={onSignUp} onLogin={onLogin} />
+        <Hero />
       </FadeSection>
       <FadeSection>
         <LogoCarousel />
@@ -384,49 +386,36 @@ function Home({ onSignUp, onLogin }: { onSignUp: () => void; onLogin: () => void
         <Testimonials />
       </FadeSection>
       <FadeSection>
-        <CtaStrip onSignUp={onSignUp} />
+        <CtaStrip />
       </FadeSection>
     </>
   );
 }
 
 export default function App() {
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | null>(null);
-  const [user, setUser] = useState<any>(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
-  const { streaks, fire: fireCoinStreak, remove: removeCoinStreak } = useCoinStreak();
+  const { streaks, remove: removeCoinStreak } = useCoinStreak();
   const location = useLocation();
 
   useEffect(() => {
     trackPixelEvent("PageView");
   }, [location.pathname]);
 
-  const handleSignUp = () => { fireCoinStreak(); setAuthMode('signup'); };
-  const handleLogin = () => { fireCoinStreak(); setAuthMode('login'); };
-
   return (
     <div className="bg-canvas text-ink min-h-screen overflow-x-clip">
       <CoinStreakOverlay streaks={streaks} onDone={removeCoinStreak} />
-      <Nav onSignUp={handleSignUp} onLogin={handleLogin} user={user} onLogout={() => { setUser(null); localStorage.removeItem('user'); }} />
+      <Nav />
       <Routes>
-        <Route path="/" element={<Home onSignUp={handleSignUp} onLogin={handleLogin} />} />
+        <Route path="/" element={<Home />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
       <Footer />
-      <AnimatePresence>
-        {authMode && (
-          <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitchMode={setAuthMode} onAuthSuccess={(u) => { setUser(u); localStorage.setItem('user', JSON.stringify(u)); }} />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
 
 /* ---------------- NAV ---------------- */
-function Nav({ onSignUp, onLogin, user, onLogout }: { onSignUp: () => void; onLogin: () => void; user?: any; onLogout?: () => void }) {
+function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -458,9 +447,9 @@ function Nav({ onSignUp, onLogin, user, onLogout }: { onSignUp: () => void; onLo
           className="backdrop-blur-xl bg-white/75 border border-white/70 rounded-full shadow-[0_4px_24px_rgba(167,139,250,0.10),0_8px_32px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.9)]"
         >
           <div className="px-6 h-[64px] flex items-center justify-between">
-            <a href="#" className="font-display font-bold tracking-tight text-[18px]">
+            <Link to="/" className="font-display font-bold tracking-tight text-[18px]">
               VERTEXIQ<span className="text-[#A78BFA]">.</span>
-            </a>
+            </Link>
             <nav className="hidden lg:flex items-center gap-9 text-[14px] text-muted2">
               {links.map((l) => (
                 <Link
@@ -474,35 +463,20 @@ function Nav({ onSignUp, onLogin, user, onLogout }: { onSignUp: () => void; onLo
               ))}
             </nav>
             <div className="flex items-center gap-3">
-              {user ? (
-                <>
-                  <Link to="/dashboard" className="hidden sm:block text-[14px] font-medium text-ink hover:text-[#A78BFA] transition-colors px-2">
-                    Tableau de bord
-                  </Link>
-                  <button onClick={onLogout} className="hidden sm:block text-[14px] font-medium text-ink hover:text-red-500 transition-colors px-2">
-                    Déconnexion
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button onClick={onLogin} className="hidden sm:block text-[14px] font-medium text-ink hover:text-[#A78BFA] transition-colors px-2">
-                    Connexion
-                  </button>
-                  <Magnetic className="hidden sm:block">
-                    <motion.button
-                      onClick={onSignUp}
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.96 }}
-                      className="group relative inline-flex items-center gap-2 rounded-full text-white px-5 py-2 text-[13px] font-medium overflow-hidden"
-                      style={{ backgroundColor: "#111111" }}
-                    >
-                      <span className="relative z-10">S'inscrire</span>
-                      <ArrowRight className="relative z-10 size-3.5 transition-transform group-hover:translate-x-0.5" />
-                      <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                    </motion.button>
-                  </Magnetic>
-                </>
-              )}
+              <Link to="/contact">
+                <Magnetic className="hidden sm:block">
+                  <motion.button
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.96 }}
+                    className="group relative inline-flex items-center gap-2 rounded-full text-white px-5 py-2 text-[13px] font-medium overflow-hidden"
+                    style={{ backgroundColor: "#111111" }}
+                  >
+                    <span className="relative z-10">Contact</span>
+                    <ArrowRight className="relative z-10 size-3.5 transition-transform group-hover:translate-x-0.5" />
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                  </motion.button>
+                </Magnetic>
+              </Link>
               <button
                 className="lg:hidden p-2 rounded-full border border-hair bg-white shadow-soft"
                 onClick={() => setMenuOpen(true)}
@@ -526,9 +500,9 @@ function Nav({ onSignUp, onLogin, user, onLogout }: { onSignUp: () => void; onLo
             style={{ willChange: "opacity" }}
           >
             <div className="flex items-center justify-between px-6 h-[72px] border-b border-white/10">
-              <a href="#" className="font-display font-bold tracking-tight text-[18px]">
+              <Link to="/" onClick={() => setMenuOpen(false)} className="font-display font-bold tracking-tight text-[18px]">
                 VERTEXIQ<span className="text-[#A78BFA]">.</span>
-              </a>
+              </Link>
               <button
                 onClick={() => setMenuOpen(false)}
                 className="p-2 rounded-full border border-white/20 hover:bg-white/10 transition-colors"
@@ -552,35 +526,15 @@ function Nav({ onSignUp, onLogin, user, onLogout }: { onSignUp: () => void; onLo
               ))}
             </nav>
             <div className="px-8 pb-10">
-              <div className="flex flex-col gap-4">
-                {user ? (
-                  <>
-                    <Link to="/dashboard" onClick={() => setMenuOpen(false)} className="w-full text-center py-4 text-[16px] font-semibold text-white border border-white/20 rounded-full">
-                      Tableau de bord
-                    </Link>
-                    <button onClick={() => { setMenuOpen(false); onLogout?.(); }} className="w-full text-center py-4 text-[16px] font-semibold text-white border border-white/20 rounded-full bg-red-500/20 text-red-300">
-                      Déconnexion
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => { setMenuOpen(false); onLogin(); }}
-                      className="w-full text-center py-4 text-[16px] font-semibold text-white border border-white/20 rounded-full"
-                    >
-                      Connexion
-                    </button>
-                    <button
-                      onClick={() => { setMenuOpen(false); onSignUp(); }}
-                      className="group relative inline-flex items-center gap-2 rounded-full bg-white text-ink px-7 py-4 text-[14px] font-semibold overflow-hidden w-full justify-center"
-                    >
-                      <span className="relative z-10">S'inscrire</span>
-                      <ArrowRight className="relative z-10 size-4" />
-                      <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-ink/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                    </button>
-                  </>
-                )}
-              </div>
+              <Link
+                to="/contact"
+                onClick={() => setMenuOpen(false)}
+                className="group relative inline-flex items-center gap-2 rounded-full bg-white text-ink px-7 py-4 text-[14px] font-semibold overflow-hidden w-full justify-center"
+              >
+                <span className="relative z-10">Contact</span>
+                <ArrowRight className="relative z-10 size-4" />
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-ink/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+              </Link>
             </div>
           </motion.div>
         )}
@@ -590,7 +544,7 @@ function Nav({ onSignUp, onLogin, user, onLogout }: { onSignUp: () => void; onLo
 }
 
 /* ---------------- HERO ---------------- */
-function Hero({ onSignUp, onLogin }: { onSignUp: () => void; onLogin?: () => void }) {
+function Hero() {
   return (
     <section id="home" className="relative overflow-hidden">
       {/* static gradient blobs — no JS scroll tracking, paint once */}
@@ -647,20 +601,25 @@ function Hero({ onSignUp, onLogin }: { onSignUp: () => void; onLogin?: () => voi
             VertexIQ combine l'intelligence artificielle avancée, l'analyse en temps réel et l'intelligence de marché automatisée pour aider les traders à identifier les opportunités, réduire la complexité et prendre des décisions basées sur les données en toute confiance.
           </motion.p>
 
-          <motion.div variants={fadeUp} className="mt-8">
-            <Magnetic>
-              <motion.button
-                onClick={onSignUp}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.97 }}
-                className="group relative inline-flex items-center gap-2 rounded-full px-7 py-4 text-[14px] font-semibold text-white overflow-hidden"
-                style={{ backgroundColor: "#111111" }}
-              >
-                <span className="relative z-10">Commencer</span>
-                <ArrowRight className="relative z-10 size-4 transition-transform group-hover:translate-x-1" />
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              </motion.button>
-            </Magnetic>
+          <motion.div variants={fadeUp} className="mt-6">
+            <HeroUrgencyBadge />
+          </motion.div>
+
+          <motion.div variants={fadeUp} className="mt-6">
+            <Link to="/contact">
+              <Magnetic>
+                <motion.button
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="group relative inline-flex items-center gap-2 rounded-full px-7 py-4 text-[14px] font-semibold text-white overflow-hidden shadow-lg shadow-black/10"
+                  style={{ backgroundColor: "#111111" }}
+                >
+                  <span className="relative z-10">Contactez-nous</span>
+                  <ArrowRight className="relative z-10 size-4 transition-transform group-hover:translate-x-1" />
+                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                </motion.button>
+              </Magnetic>
+            </Link>
           </motion.div>
 
           <motion.p variants={fadeUp} className="mt-6 text-[12px] text-muted2">
@@ -1267,7 +1226,7 @@ function Testimonials() {
 }
 
 /* ---------------- CTA ---------------- */
-function CtaStrip({ onSignUp }: { onSignUp: () => void }) {
+function CtaStrip() {
   const navigate = useNavigate();
   return (
     <section id="cta" className="relative py-20 lg:py-28">
@@ -1304,12 +1263,12 @@ function CtaStrip({ onSignUp }: { onSignUp: () => void }) {
 
           <Stagger className="relative mt-12 grid md:grid-cols-2 gap-5">
             <CtaCard
-              kicker="Accès Gratuit"
+              kicker="Contact Direct"
               title="Explorer VertexIQ"
               body="Découvrez comment l'analyse intelligente peut améliorer votre prise de décision."
-              button="Accès Gratuit"
+              button="Nous Contacter"
               variant="diagnostic"
-              onClick={onSignUp}
+              onClick={() => { navigate('/contact'); window.scrollTo(0, 0); }}
             />
             <CtaCard
               kicker="Consultation Personnelle"
@@ -1942,6 +1901,8 @@ function ContactPage() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [contactMsg, setContactMsg] = useState<{ type: 'already_exists' | 'generic' | null; text: string } | null>(null);
   const [contactCountryCode, setContactCountryCode] = useState('CH');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -1978,17 +1939,22 @@ function ContactPage() {
           phone: data.phone,
           message: data.message || '',
           countryCode: contactCountryCode,
+          turnstileToken: turnstileToken || '',
         }),
       });
       const result = await res.json().catch(() => ({}));
       if (res.status === 500 || res.status === 409 || result.crmStatus === 'already_exists' || (typeof result.error === 'string' && (result.error.toLowerCase().includes('already') || result.error.toLowerCase().includes('exist')))) {
         setContactMsg({ type: 'already_exists', text: "You have already contacted us. Please wait while our team reviews your request. We'll get back to you soon." });
         setLoading(false);
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
         return;
       }
       if (!res.ok) {
-        setContactMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
+        setContactMsg({ type: 'generic', text: result.error || 'Une erreur est survenue lors de l\'envoi.' });
         setLoading(false);
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
         return;
       }
       trackPixelEvent("Lead", {
@@ -2004,6 +1970,8 @@ function ContactPage() {
       setContactMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
     }
     setLoading(false);
+    turnstileRef.current?.reset();
+    setTurnstileToken(null);
   };
 
   return (
@@ -2020,7 +1988,7 @@ function ContactPage() {
           Remplissez le formulaire ci-dessous pour contacter l'équipe VertexIQ. Que vous ayez besoin d'une démonstration, d'une consultation ou d'un support technique, nous sommes là pour vous aider.
         </p>
 
-        <div className="mt-12 bg-white rounded-3xl border border-hair shadow-soft p-8 sm:p-10">
+        <div className="mt-8 sm:mt-12 bg-white rounded-3xl border border-hair shadow-soft p-5 sm:p-8 md:p-10 w-full max-w-full overflow-hidden">
           {submitted ? (
             <div className="text-center py-10">
               <div className="mx-auto size-14 rounded-full bg-green-50 border border-green-100 flex items-center justify-center mb-5">
@@ -2034,7 +2002,7 @@ function ContactPage() {
               </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full max-w-full">
               <div>
                 <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Nom Complet</label>
                 <input
@@ -2055,7 +2023,7 @@ function ContactPage() {
                   placeholder="jean@exemple.com"
                 />
               </div>
-              <div>
+              <div className="w-full">
                 <label className="block text-[12px] font-semibold text-ink mb-1.5 ml-1">Phone Number</label>
                 {contactMsg && (
                   <div className={`mb-3 text-[13px] font-medium rounded-xl px-4 py-3 border ${
@@ -2064,18 +2032,18 @@ function ContactPage() {
                       : 'bg-red-50 border-red-100 text-red-600'
                   }`}>{contactMsg.text}</div>
                 )}
-                <div className="flex gap-2">
-                  <div className="relative">
+                <div className="flex gap-2 w-full min-w-0 max-w-full">
+                  <div className="relative flex-shrink-0">
                     <select
                       id="contact-page-country-code"
                       value={contactCountryCode}
                       onChange={(e) => setContactCountryCode(e.target.value)}
-                      className="h-full rounded-xl border border-hair bg-[#FAFAFA] pl-3 pr-8 py-3.5 text-[13px] font-medium outline-none focus:border-[#A78BFA] transition-colors cursor-pointer appearance-none"
+                      className="h-full rounded-xl border border-hair bg-[#FAFAFA] pl-2.5 pr-7 py-3.5 text-[13px] font-medium outline-none focus:border-[#A78BFA] transition-colors cursor-pointer appearance-none max-w-[110px] sm:max-w-none"
                       style={{
                         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236F6F6F' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
                         backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'right 8px center',
-                        paddingRight: '28px',
+                        backgroundPosition: 'right 6px center',
+                        paddingRight: '22px',
                       }}
                     >
                       {Object.entries(COUNTRY_PHONE_PATTERNS).map(([code, c]) => (
@@ -2086,7 +2054,7 @@ function ContactPage() {
                   <input
                     name="phone"
                     type="tel"
-                    className={`flex-1 rounded-xl border bg-[#FAFAFA] px-4 py-3.5 text-[14px] outline-none transition-colors ${phoneError ? 'border-red-500 focus:border-red-500' : 'border-hair focus:border-[#A78BFA]'}`}
+                    className={`flex-1 min-w-0 w-full rounded-xl border bg-[#FAFAFA] px-3 sm:px-4 py-3.5 text-[14px] outline-none transition-colors ${phoneError ? 'border-red-500 focus:border-red-500' : 'border-hair focus:border-[#A78BFA]'}`}
                     placeholder={COUNTRY_PHONE_PATTERNS[contactCountryCode]?.example || '079 123 45 67'}
                   />
                 </div>
@@ -2101,10 +2069,18 @@ function ContactPage() {
                   placeholder="Comment pouvons-nous vous aider ?"
                 />
               </div>
+
+              {/* Cloudflare Turnstile Captcha */}
+              <TurnstileWidget
+                ref={turnstileRef}
+                onVerify={(token) => setTurnstileToken(token)}
+                onExpire={() => setTurnstileToken(null)}
+              />
+
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-4 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-4 hover:bg-black transition-colors disabled:opacity-60"
+                className="mt-2 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-4 hover:bg-black transition-colors disabled:opacity-60"
               >
                 {loading ? 'Envoi...' : 'Envoyer le Message'}
               </button>
@@ -2367,6 +2343,8 @@ function ContactLeadForm() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [leadMsg, setLeadMsg] = useState<{ type: 'already_exists' | 'generic' | null; text: string } | null>(null);
   const [leadCountryCode, setLeadCountryCode] = useState('CH');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -2397,17 +2375,22 @@ function ContactLeadForm() {
           phone: data.phone,
           message: data.message || '',
           countryCode: leadCountryCode,
+          turnstileToken: turnstileToken || '',
         }),
       });
       const result = await res.json().catch(() => ({}));
       if (res.status === 500 || res.status === 409 || result.crmStatus === 'already_exists' || (typeof result.error === 'string' && (result.error.toLowerCase().includes('already') || result.error.toLowerCase().includes('exist')))) {
         setLeadMsg({ type: 'already_exists', text: "You have already contacted us. Please wait while our team reviews your request. We'll get back to you soon." });
         setLoading(false);
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
         return;
       }
       if (!res.ok) {
-        setLeadMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
+        setLeadMsg({ type: 'generic', text: result.error || 'Une erreur est survenue lors de l\'envoi.' });
         setLoading(false);
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
         return;
       }
       trackPixelEvent("Lead", {
@@ -2420,6 +2403,8 @@ function ContactLeadForm() {
       setLeadMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
     }
     setLoading(false);
+    turnstileRef.current?.reset();
+    setTurnstileToken(null);
   };
 
   return (
@@ -2505,7 +2490,7 @@ function ContactLeadForm() {
                 />
               </div>
 
-              <div>
+              <div className="w-full">
                 <label className="block text-[12px] font-semibold text-ink/70 uppercase tracking-wider mb-1.5">Phone Number</label>
                 {leadMsg && (
                   <div className={`mb-3 text-[13px] font-medium rounded-xl px-4 py-3 border ${
@@ -2514,18 +2499,18 @@ function ContactLeadForm() {
                       : 'bg-red-50 border-red-100 text-red-600'
                   }`}>{leadMsg.text}</div>
                 )}
-                <div className="flex gap-2">
-                  <div className="relative">
+                <div className="flex gap-2 w-full min-w-0 max-w-full">
+                  <div className="relative flex-shrink-0">
                     <select
                       id="lead-form-country-code"
                       value={leadCountryCode}
                       onChange={(e) => setLeadCountryCode(e.target.value)}
-                      className="h-full rounded-xl border border-hair bg-[#FAFAFA] pl-3 pr-8 py-3 text-[13px] font-medium outline-none focus:border-[#A78BFA] transition-colors cursor-pointer appearance-none"
+                      className="h-full rounded-xl border border-hair bg-[#FAFAFA] pl-2.5 pr-7 py-3 text-[13px] font-medium outline-none focus:border-[#A78BFA] transition-colors cursor-pointer appearance-none max-w-[110px] sm:max-w-none"
                       style={{
                         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236F6F6F' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
                         backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'right 8px center',
-                        paddingRight: '28px',
+                        backgroundPosition: 'right 6px center',
+                        paddingRight: '22px',
                       }}
                     >
                       {Object.entries(COUNTRY_PHONE_PATTERNS).map(([code, c]) => (
@@ -2537,7 +2522,7 @@ function ContactLeadForm() {
                     name="phone"
                     type="tel"
                     placeholder={COUNTRY_PHONE_PATTERNS[leadCountryCode]?.example || '079 123 45 67'}
-                    className={`flex-1 rounded-xl border bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 transition-all placeholder:text-ink/30 ${phoneError ? 'border-red-500 focus:border-red-500' : 'border-hair focus:border-[#A78BFA]'}`}
+                    className={`flex-1 min-w-0 w-full rounded-xl border bg-[#FAFAFA] px-3 sm:px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 transition-all placeholder:text-ink/30 ${phoneError ? 'border-red-500 focus:border-red-500' : 'border-hair focus:border-[#A78BFA]'}`}
                   />
                 </div>
                 {phoneError && <p className="text-red-500 text-[12px] mt-1">{phoneError}</p>}
@@ -2552,6 +2537,13 @@ function ContactLeadForm() {
                   className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3 text-[14px] outline-none focus:ring-2 focus:ring-[#A78BFA]/40 focus:border-[#A78BFA] transition-all resize-none placeholder:text-ink/30"
                 />
               </div>
+
+              {/* Cloudflare Turnstile Captcha */}
+              <TurnstileWidget
+                ref={turnstileRef}
+                onVerify={(token) => setTurnstileToken(token)}
+                onExpire={() => setTurnstileToken(null)}
+              />
 
               <motion.button
                 type="submit"
