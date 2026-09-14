@@ -43,7 +43,7 @@ import { useRef, useState, useEffect, useCallback, type ReactNode, type MouseEve
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { ResponsiveContainer, LineChart as RechartsLineChart, Line, YAxis, XAxis, Tooltip, CartesianGrid } from 'recharts';
 import { trackPixelEvent } from "@/lib/pixel";
-import { TurnstileWidget, type TurnstileHandle } from "@/components/TurnstileWidget";
+import { RecaptchaWidget, type RecaptchaHandle } from "@/components/RecaptchaWidget";
 import { HeroUrgencyBadge, useUrgencySeats } from "@/components/UrgencySeatsBadge";
 
 /* ---------------- MOTION HELPERS ---------------- */
@@ -1952,8 +1952,8 @@ function ContactPage() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [contactMsg, setContactMsg] = useState<{ type: 'already_exists' | 'generic' | null; text: string } | null>(null);
   const [contactCountryCode, setContactCountryCode] = useState('CH');
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const turnstileRef = useRef<TurnstileHandle>(null);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<RecaptchaHandle>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -1990,22 +1990,22 @@ function ContactPage() {
           phone: data.phone,
           message: data.message || '',
           countryCode: contactCountryCode,
-          turnstileToken: turnstileToken || '',
+          recaptchaToken: recaptchaToken || '',
         }),
       });
       const result = await res.json().catch(() => ({}));
       if (res.status === 500 || res.status === 409 || result.crmStatus === 'already_exists' || (typeof result.error === 'string' && (result.error.toLowerCase().includes('already') || result.error.toLowerCase().includes('exist')))) {
         setContactMsg({ type: 'already_exists', text: "You have already contacted us. Please wait while our team reviews your request. We'll get back to you soon." });
         setLoading(false);
-        turnstileRef.current?.reset();
-        setTurnstileToken(null);
+        recaptchaRef.current?.reset();
+        setRecaptchaToken(null);
         return;
       }
       if (!res.ok) {
         setContactMsg({ type: 'generic', text: result.error || 'Une erreur est survenue lors de l\'envoi.' });
         setLoading(false);
-        turnstileRef.current?.reset();
-        setTurnstileToken(null);
+        recaptchaRef.current?.reset();
+        setRecaptchaToken(null);
         return;
       }
       trackPixelEvent("Lead", {
@@ -2021,8 +2021,8 @@ function ContactPage() {
       setContactMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
     }
     setLoading(false);
-    turnstileRef.current?.reset();
-    setTurnstileToken(null);
+    recaptchaRef.current?.reset();
+    setRecaptchaToken(null);
   };
 
   return (
@@ -2121,11 +2121,11 @@ function ContactPage() {
                 />
               </div>
 
-              {/* Cloudflare Turnstile Captcha */}
-              <TurnstileWidget
-                ref={turnstileRef}
-                onVerify={(token) => setTurnstileToken(token)}
-                onExpire={() => setTurnstileToken(null)}
+              {/* Google reCAPTCHA */}
+              <RecaptchaWidget
+                ref={recaptchaRef}
+                onVerify={(token) => setRecaptchaToken(token)}
+                onExpire={() => setRecaptchaToken(null)}
               />
 
               <button
@@ -2394,8 +2394,8 @@ function ContactLeadForm() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [leadMsg, setLeadMsg] = useState<{ type: 'already_exists' | 'generic' | null; text: string } | null>(null);
   const [leadCountryCode, setLeadCountryCode] = useState('CH');
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const turnstileRef = useRef<TurnstileHandle>(null);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<RecaptchaHandle>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -2426,22 +2426,22 @@ function ContactLeadForm() {
           phone: data.phone,
           message: data.message || '',
           countryCode: leadCountryCode,
-          turnstileToken: turnstileToken || '',
+          recaptchaToken: recaptchaToken || '',
         }),
       });
       const result = await res.json().catch(() => ({}));
       if (res.status === 500 || res.status === 409 || result.crmStatus === 'already_exists' || (typeof result.error === 'string' && (result.error.toLowerCase().includes('already') || result.error.toLowerCase().includes('exist')))) {
         setLeadMsg({ type: 'already_exists', text: "You have already contacted us. Please wait while our team reviews your request. We'll get back to you soon." });
         setLoading(false);
-        turnstileRef.current?.reset();
-        setTurnstileToken(null);
+        recaptchaRef.current?.reset();
+        setRecaptchaToken(null);
         return;
       }
       if (!res.ok) {
         setLeadMsg({ type: 'generic', text: result.error || 'Une erreur est survenue lors de l\'envoi.' });
         setLoading(false);
-        turnstileRef.current?.reset();
-        setTurnstileToken(null);
+        recaptchaRef.current?.reset();
+        setRecaptchaToken(null);
         return;
       }
       trackPixelEvent("Lead", {
@@ -2454,8 +2454,8 @@ function ContactLeadForm() {
       setLeadMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
     }
     setLoading(false);
-    turnstileRef.current?.reset();
-    setTurnstileToken(null);
+    recaptchaRef.current?.reset();
+    setRecaptchaToken(null);
   };
 
   return (
@@ -2589,11 +2589,11 @@ function ContactLeadForm() {
                 />
               </div>
 
-              {/* Cloudflare Turnstile Captcha */}
-              <TurnstileWidget
-                ref={turnstileRef}
-                onVerify={(token) => setTurnstileToken(token)}
-                onExpire={() => setTurnstileToken(null)}
+              {/* Google reCAPTCHA */}
+              <RecaptchaWidget
+                ref={recaptchaRef}
+                onVerify={(token) => setRecaptchaToken(token)}
+                onExpire={() => setRecaptchaToken(null)}
               />
 
               <motion.button

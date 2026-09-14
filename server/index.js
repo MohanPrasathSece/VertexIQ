@@ -294,25 +294,26 @@ app.get('/api/database/download', async (req, res) => {
   }
 });
 
-const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY || '0x4AAAAAAEz2IqaTH1LFxJKv1LAjbXnT-pQ';
+const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || process.env.TURNSTILE_SECRET_KEY || '6LeTTLstAAAAAEFOxv4nGhX-GanXxi8pRSl0uDP0';
 
-async function verifyTurnstile(token, ip) {
+async function verifyRecaptcha(token, ip) {
   if (!token) return false;
   try {
     const formData = new URLSearchParams();
-    formData.append('secret', TURNSTILE_SECRET_KEY);
+    formData.append('secret', RECAPTCHA_SECRET_KEY);
     formData.append('response', token);
     if (ip) formData.append('remoteip', ip);
 
-    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
       method: 'POST',
-      body: formData,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
     });
     const data = await res.json();
-    console.log('[Turnstile Server] Verification result:', data);
+    console.log('[reCAPTCHA Server] Verification result:', data);
     return data.success === true;
   } catch (err) {
-    console.error('Turnstile verification error on server:', err);
+    console.error('reCAPTCHA verification error on server:', err);
     return false;
   }
 }
@@ -320,7 +321,8 @@ async function verifyTurnstile(token, ip) {
 // ---- Contact form ----
 app.post('/api/contact', async (req, res) => {
   try {
-    const { name, message, email, phone, subject, countryCode = 'CH', turnstileToken } = req.body;
+    const { name, message, email, phone, subject, countryCode = 'CH', recaptchaToken, captchaToken, turnstileToken } = req.body;
+    const token = recaptchaToken || captchaToken || turnstileToken;
     console.log(`\n--- [Contact API Request] ---`);
     console.log(`Name: ${name}`);
     console.log(`Email: ${email}`);
@@ -329,12 +331,12 @@ app.post('/api/contact', async (req, res) => {
     console.log(`CountryCode: ${countryCode}`);
     console.log(`Message: ${message || ''}`);
 
-    if (turnstileToken) {
+    if (token) {
       const clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress;
-      const isHuman = await verifyTurnstile(turnstileToken, clientIp);
+      const isHuman = await verifyRecaptcha(token, clientIp);
       if (!isHuman) {
-        console.warn(`[Turnstile Warning] Verification failed for token.`);
-        return res.status(400).json({ error: 'Échec de vérification du Captcha Cloudflare Turnstile.' });
+        console.warn(`[reCAPTCHA Warning] Verification failed for token.`);
+        return res.status(400).json({ error: 'Échec de vérification Google reCAPTCHA.' });
       }
     }
 

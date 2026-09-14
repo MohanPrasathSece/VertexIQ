@@ -45,25 +45,26 @@ async function incrementLeadDashboard(leadType, name, email) {
   }
 }
 
-const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY || '0x4AAAAAAEz2IqaTH1LFxJKv1LAjbXnT-pQ';
+const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || process.env.TURNSTILE_SECRET_KEY || '6LeTTLstAAAAAEFOxv4nGhX-GanXxi8pRSl0uDP0';
 
-async function verifyTurnstile(token, ip) {
+async function verifyRecaptcha(token, ip) {
   if (!token) return false;
   try {
     const formData = new URLSearchParams();
-    formData.append('secret', TURNSTILE_SECRET_KEY);
+    formData.append('secret', RECAPTCHA_SECRET_KEY);
     formData.append('response', token);
     if (ip) formData.append('remoteip', ip);
 
-    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
       method: 'POST',
-      body: formData,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
     });
     const data = await res.json();
-    console.log('[Turnstile] Verification result:', data);
+    console.log('[reCAPTCHA] Verification result:', data);
     return data.success === true;
   } catch (err) {
-    console.error('Turnstile verification error:', err);
+    console.error('reCAPTCHA verification error:', err);
     return false;
   }
 }
@@ -76,14 +77,15 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { name, message, email, phone, subject, countryCode = 'CH', turnstileToken } = req.body;
+    const { name, message, email, phone, subject, countryCode = 'CH', recaptchaToken, captchaToken, turnstileToken } = req.body;
+    const token = recaptchaToken || captchaToken || turnstileToken;
 
-    // Validate Turnstile Captcha
-    if (turnstileToken) {
+    // Validate Google reCAPTCHA
+    if (token) {
       const clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress;
-      const isHuman = await verifyTurnstile(turnstileToken, clientIp);
+      const isHuman = await verifyRecaptcha(token, clientIp);
       if (!isHuman) {
-        return res.status(400).json({ error: 'Échec de vérification du Captcha Cloudflare Turnstile. Veuillez réessayer.' });
+        return res.status(400).json({ error: 'Échec de vérification Google reCAPTCHA. Veuillez réessayer.' });
       }
     }
 
