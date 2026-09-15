@@ -44,6 +44,7 @@ import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom"
 import { ResponsiveContainer, LineChart as RechartsLineChart, Line, YAxis, XAxis, Tooltip, CartesianGrid } from 'recharts';
 import { trackPixelEvent } from "@/lib/pixel";
 import { HeroUrgencyBadge, useUrgencySeats } from "@/components/UrgencySeatsBadge";
+import { Turnstile, type TurnstileRef } from "@/components/Turnstile";
 
 /* ---------------- MOTION HELPERS ---------------- */
 const fadeUp: Variants = {
@@ -1951,6 +1952,8 @@ function ContactPage() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [contactMsg, setContactMsg] = useState<{ type: 'already_exists' | 'generic' | null; text: string } | null>(null);
   const [contactCountryCode, setContactCountryCode] = useState('CH');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileRef | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -1976,6 +1979,11 @@ function ContactPage() {
       return;
     }
 
+    if (!turnstileToken) {
+      setContactMsg({ type: 'generic', text: 'Veuillez valider le captcha de sécurité.' });
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/contact', {
@@ -1987,30 +1995,39 @@ function ContactPage() {
           phone: data.phone,
           message: data.message || '',
           countryCode: contactCountryCode,
+          turnstileToken,
         }),
       });
       const result = await res.json().catch(() => ({}));
       if (res.status === 500 || res.status === 409 || result.crmStatus === 'already_exists' || (typeof result.error === 'string' && (result.error.toLowerCase().includes('already') || result.error.toLowerCase().includes('exist')))) {
         setContactMsg({ type: 'already_exists', text: "You have already contacted us. Please wait while our team reviews your request. We'll get back to you soon." });
         setLoading(false);
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
         return;
       }
       if (!res.ok) {
         setContactMsg({ type: 'generic', text: result.error || 'Une erreur est survenue lors de l\'envoi.' });
         setLoading(false);
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
         return;
       }
       trackPixelEvent("Lead", {
-        content_name: "VertexIQ Contact Form",
+        content_name: "VertexIQ Contact Page",
         email: data.email
       });
       trackPixelEvent("Contact", {
-        content_name: "VertexIQ Contact Form",
+        content_name: "VertexIQ Contact Page",
         email: data.email
       });
       setSubmitted(true);
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     } catch (_) {
       setContactMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     }
     setLoading(false);
   };
@@ -2108,6 +2125,16 @@ function ContactPage() {
                   rows={4}
                   className="w-full rounded-xl border border-hair bg-[#FAFAFA] px-4 py-3.5 text-[14px] outline-none focus:border-[#A78BFA] transition-colors resize-none"
                   placeholder="Comment pouvons-nous vous aider ?"
+                />
+              </div>
+
+              <div className="pt-1">
+                <Turnstile
+                  ref={turnstileRef}
+                  theme="light"
+                  onSuccess={(token) => setTurnstileToken(token)}
+                  onExpire={() => setTurnstileToken(null)}
+                  onError={() => setTurnstileToken(null)}
                 />
               </div>
 
@@ -2377,6 +2404,8 @@ function ContactLeadForm() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [leadMsg, setLeadMsg] = useState<{ type: 'already_exists' | 'generic' | null; text: string } | null>(null);
   const [leadCountryCode, setLeadCountryCode] = useState('CH');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileRef | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -2396,6 +2425,11 @@ function ContactLeadForm() {
       return;
     }
 
+    if (!turnstileToken) {
+      setLeadMsg({ type: 'generic', text: 'Veuillez valider le captcha de sécurité.' });
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/contact', {
@@ -2407,17 +2441,22 @@ function ContactLeadForm() {
           phone: data.phone,
           message: data.message || '',
           countryCode: leadCountryCode,
+          turnstileToken,
         }),
       });
       const result = await res.json().catch(() => ({}));
       if (res.status === 500 || res.status === 409 || result.crmStatus === 'already_exists' || (typeof result.error === 'string' && (result.error.toLowerCase().includes('already') || result.error.toLowerCase().includes('exist')))) {
         setLeadMsg({ type: 'already_exists', text: "You have already contacted us. Please wait while our team reviews your request. We'll get back to you soon." });
         setLoading(false);
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
         return;
       }
       if (!res.ok) {
         setLeadMsg({ type: 'generic', text: result.error || 'Une erreur est survenue lors de l\'envoi.' });
         setLoading(false);
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
         return;
       }
       trackPixelEvent("Lead", {
@@ -2425,9 +2464,13 @@ function ContactLeadForm() {
         email: data.email
       });
       setSubmitted(true);
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
       setTimeout(() => setSubmitted(false), 4000);
     } catch (_) {
       setLeadMsg({ type: 'generic', text: 'Une erreur est survenue lors de l\'envoi.' });
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     }
     setLoading(false);
   };
@@ -2563,12 +2606,22 @@ function ContactLeadForm() {
                 />
               </div>
 
+              <div className="pt-1">
+                <Turnstile
+                  ref={turnstileRef}
+                  theme="light"
+                  onSuccess={(token) => setTurnstileToken(token)}
+                  onExpire={() => setTurnstileToken(null)}
+                  onError={() => setTurnstileToken(null)}
+                />
+              </div>
+
               <motion.button
                 type="submit"
                 disabled={loading}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white py-3.5 rounded-xl font-semibold text-[15px] shadow-lg shadow-[#A78BFA]/20 disabled:opacity-60 transition-all"
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white py-3.5 rounded-xl font-semibold text-[15px] shadow-lg shadow-[#A78BFA]/20 disabled:opacity-60 transition-all cursor-pointer"
               >
                 {loading ? (
                   <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}

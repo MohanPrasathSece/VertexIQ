@@ -45,26 +45,26 @@ async function incrementLeadDashboard(leadType, name, email) {
   }
 }
 
-const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || process.env.TURNSTILE_SECRET_KEY || '6LeTTLstAAAAAEFOxv4nGhX-GanXxi8pRSl0uDP0';
+const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY || process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY || '0x4AAAAAAEz2IqiQUH0ZVVPJ';
 
-async function verifyRecaptcha(token, ip) {
+async function verifyTurnstile(token, ip) {
   if (!token) return false;
   try {
     const formData = new URLSearchParams();
-    formData.append('secret', RECAPTCHA_SECRET_KEY);
+    formData.append('secret', TURNSTILE_SECRET_KEY);
     formData.append('response', token);
     if (ip) formData.append('remoteip', ip);
 
-    const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString(),
     });
     const data = await res.json();
-    console.log('[reCAPTCHA] Verification result:', data);
+    console.log('[Turnstile] Verification result:', data);
     return data.success === true;
   } catch (err) {
-    console.error('reCAPTCHA verification error:', err);
+    console.error('Turnstile verification error:', err);
     return false;
   }
 }
@@ -77,16 +77,18 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { name, message, email, phone, subject, countryCode = 'CH', recaptchaToken, captchaToken, turnstileToken } = req.body;
-    const token = recaptchaToken || captchaToken || turnstileToken;
+    const { name, message, email, phone, subject, countryCode = 'CH', recaptchaToken, captchaToken, turnstileToken, 'cf-turnstile-response': cfResponse } = req.body;
+    const token = turnstileToken || cfResponse || recaptchaToken || captchaToken;
 
-    // Validate Google reCAPTCHA
-    if (token) {
-      const clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress;
-      const isHuman = await verifyRecaptcha(token, clientIp);
-      if (!isHuman) {
-        return res.status(400).json({ error: 'Échec de vérification Google reCAPTCHA. Veuillez réessayer.' });
-      }
+    // Validate Cloudflare Turnstile
+    if (!token) {
+      return res.status(400).json({ error: 'Veuillez valider le captcha de sécurité.' });
+    }
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress;
+    const isHuman = await verifyTurnstile(token, clientIp);
+    if (!isHuman) {
+      return res.status(400).json({ error: 'Échec de vérification du captcha de sécurité. Veuillez réessayer.' });
     }
 
     if (!name) {
