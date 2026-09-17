@@ -407,6 +407,10 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/politique-de-confidentialite" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/conditions-utilisation" element={<TermsPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
       <Footer />
@@ -1457,9 +1461,9 @@ function Footer() {
             <FooterCol
               title="Légal"
               links={[
-                { label: "Politique de Confidentialité", href: "/contact" },
-                { label: "Conditions d'Utilisation", href: "/contact" },
-                { label: "Cookies", href: "/contact" },
+                { label: "Politique de Confidentialité", href: "/privacy" },
+                { label: "Conditions d'Utilisation", href: "/terms" },
+                { label: "Cookies", href: "/privacy" },
               ]}
             />
           </div>
@@ -1804,7 +1808,7 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
                     className="mt-0.5 h-4 w-4 rounded border-hair text-[#7C3AED] focus:ring-[#A78BFA] cursor-pointer accent-[#7C3AED] shrink-0"
                   />
                   <label htmlFor="signup-consent" className="text-[12px] text-muted2 leading-relaxed cursor-pointer select-none">
-                    J'accepte d'être contacté(e) par VertexIQ et je confirme avoir lu et accepté les <Link to="/contact" onClick={onClose} className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Conditions d'Utilisation</Link> et la <Link to="/contact" onClick={onClose} className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Politique de Confidentialité</Link>.
+                    J'accepte d'être contacté(e) par VertexIQ et je confirme avoir lu et accepté les <Link to="/terms" onClick={onClose} className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Conditions d'Utilisation</Link> et la <Link to="/privacy" onClick={onClose} className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Politique de Confidentialité</Link>.
                   </label>
                 </motion.div>
 
@@ -2137,7 +2141,7 @@ function ContactPage() {
                   className="mt-0.5 h-4 w-4 rounded border-hair text-[#7C3AED] focus:ring-[#A78BFA] cursor-pointer accent-[#7C3AED] shrink-0"
                 />
                 <label htmlFor="contact-page-consent" className="text-[12px] text-muted2 leading-relaxed cursor-pointer select-none">
-                  J'accepte d'être contacté(e) par VertexIQ et je confirme avoir lu et accepté les <Link to="/contact" className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Conditions d'Utilisation</Link> et la <Link to="/contact" className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Politique de Confidentialité</Link>.
+                  J'accepte d'être contacté(e) par VertexIQ et je confirme avoir lu et accepté les <Link to="/terms" className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Conditions d'Utilisation</Link> et la <Link to="/privacy" className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Politique de Confidentialité</Link>.
                 </label>
               </div>
 
@@ -2150,6 +2154,163 @@ function ContactPage() {
               </button>
             </form>
           )}
+        </div>
+      </FadeSection>
+    </div>
+  );
+}
+
+/* ---------------- PRIVACY POLICY PAGE ---------------- */
+function PrivacyPolicyPage() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    trackPixelEvent("PageView");
+  }, []);
+
+  return (
+    <div className="pt-32 pb-24 lg:pt-40 lg:pb-32 px-6 lg:px-10 max-w-4xl mx-auto min-h-[80vh]">
+      <FadeSection>
+        <div className="inline-flex items-center gap-2 text-[11px] tracking-[0.18em] uppercase text-muted2">
+          <span className="size-1.5 rounded-full bg-[#A78BFA]" />
+          Légal & Confidentialité
+        </div>
+        <h1 className="mt-6 font-display font-bold text-[36px] sm:text-[48px] leading-[1.1] text-ink">
+          Politique de Confidentialité
+        </h1>
+        <p className="mt-4 text-[15px] text-muted2">
+          Dernière mise à jour : Mars 2026
+        </p>
+
+        <div className="mt-8 sm:mt-12 bg-white rounded-3xl border border-hair shadow-soft p-6 sm:p-10 space-y-8 text-[15px] leading-relaxed text-muted2">
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">1. Introduction</h2>
+            <p>
+              La présente Politique de Confidentialité décrit la façon dont VertexIQ collecte, utilise et protège vos informations personnelles lorsque vous utilisez notre plateforme, nos outils et nos services en ligne.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">2. Données collectées</h2>
+            <p>
+              Nous pouvons collecter les données suivantes lorsque vous interagissez avec notre site :
+            </p>
+            <ul className="list-disc pl-5 space-y-1.5 text-muted2">
+              <li>Informations d'identification (nom complet, prénom).</li>
+              <li>Informations de contact (numéro de téléphone, coordonnées transmises).</li>
+              <li>Données techniques et de navigation (adresse IP, type de navigateur, pages consultées, temps passé).</li>
+              <li>Données relatives à vos demandes et messages transmis via nos formulaires.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">3. Utilisation de vos données</h2>
+            <p>
+              Les données collectées sont utilisées pour les finalités suivantes :
+            </p>
+            <ul className="list-disc pl-5 space-y-1.5 text-muted2">
+              <li>Traiter vos demandes de renseignements et vous recontacter.</li>
+              <li>Fournir et améliorer nos services d'analyse et outils algorithmiques.</li>
+              <li>Assurer la sécurité de notre plateforme et prévenir les fraudes.</li>
+              <li>Respecter nos obligations légales et réglementaires.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">4. Partage et protection des données</h2>
+            <p>
+              VertexIQ ne vend ni ne loue vos données personnelles à des tiers. Vos données peuvent être partagées uniquement avec des prestataires techniques de confiance indispensables au fonctionnement sécurisé de la plateforme. Nous mettons en œuvre des mesures de sécurité techniques et organisationnelles conformes aux standards de l'industrie pour protéger vos données contre tout accès non autorisé.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">5. Cookies et technologies de suivi</h2>
+            <p>
+              Nous utilisons des cookies et technologies similaires pour optimiser l'expérience utilisateur, analyser les performances de notre site et adapter notre contenu. Vous pouvez paramétrer vos préférences en matière de cookies directement dans les réglages de votre navigateur.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">6. Vos droits</h2>
+            <p>
+              Conformément à la réglementation applicable en matière de protection des données, vous disposez d'un droit d'accès, de rectification, de suppression et d'opposition au traitement de vos données personnelles. Vous pouvez exercer ces droits à tout moment via le formulaire de contact disponible sur notre plateforme.
+            </p>
+          </section>
+        </div>
+      </FadeSection>
+    </div>
+  );
+}
+
+/* ---------------- TERMS OF SERVICE PAGE ---------------- */
+function TermsPage() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    trackPixelEvent("PageView");
+  }, []);
+
+  return (
+    <div className="pt-32 pb-24 lg:pt-40 lg:pb-32 px-6 lg:px-10 max-w-4xl mx-auto min-h-[80vh]">
+      <FadeSection>
+        <div className="inline-flex items-center gap-2 text-[11px] tracking-[0.18em] uppercase text-muted2">
+          <span className="size-1.5 rounded-full bg-[#A78BFA]" />
+          Conditions d'Utilisation
+        </div>
+        <h1 className="mt-6 font-display font-bold text-[36px] sm:text-[48px] leading-[1.1] text-ink">
+          Conditions Générales d'Utilisation
+        </h1>
+        <p className="mt-4 text-[15px] text-muted2">
+          Dernière mise à jour : Mars 2026
+        </p>
+
+        <div className="mt-8 sm:mt-12 bg-white rounded-3xl border border-hair shadow-soft p-6 sm:p-10 space-y-8 text-[15px] leading-relaxed text-muted2">
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">1. Acceptation des conditions</h2>
+            <p>
+              En accédant et en utilisant la plateforme VertexIQ, vous acceptez sans réserve d'être lié par les présentes Conditions Générales d'Utilisation. Si vous n'acceptez pas l'intégralité de ces conditions, vous ne devez pas accéder aux services.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">2. Description des services</h2>
+            <p>
+              VertexIQ met à disposition des outils d'analyse de données de marché, des tableaux de bord interactifs et des flux d'informations algorithmiques à titre informatif et éducatif.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">3. Avertissement sur les risques financiers</h2>
+            <p>
+              Le trading et l'investissement sur les marchés financiers et d'actifs numériques comportent des risques significatifs de perte en capital. Les informations, graphiques, signaux et outils fournis par VertexIQ ne constituent en aucun cas des conseils en investissement, recommandations financières ou incitations à trader. Chaque utilisateur demeure entièrement responsable de ses décisions d'investissement.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">4. Propriété intellectuelle</h2>
+            <p>
+              L'ensemble des contenus présents sur la plateforme (textes, graphismes, logos, logiciels, algorithmes, interfaces) est protégé par les droits de propriété intellectuelle. Toute reproduction, diffusion ou exploitation non autorisée est strictement interdite.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">5. Obligations de l'utilisateur</h2>
+            <p>
+              L'utilisateur s'engage à fournir des informations exactes lors de ses demandes, à ne pas perturber l'intégrité ou la sécurité de la plateforme et à utiliser les services dans le respect des lois et règlements applicables.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">6. Limitation de responsabilité</h2>
+            <p>
+              VertexIQ ne garantit pas que les informations fournies soient exemptes d'erreurs ou toujours à jour. Dans toute la mesure permise par la loi, VertexIQ décline toute responsabilité pour tout dommage direct ou indirect résultant de l'utilisation ou de l'impossibilité d'utiliser la plateforme.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display font-bold text-[20px] text-ink">7. Modification des conditions</h2>
+            <p>
+              VertexIQ se réserve le droit de modifier les présentes conditions à tout moment. Les modifications entrent en vigueur dès leur publication sur cette page.
+            </p>
+          </section>
         </div>
       </FadeSection>
     </div>
@@ -2604,7 +2765,7 @@ function ContactLeadForm() {
                   className="mt-0.5 h-4 w-4 rounded border-hair text-[#7C3AED] focus:ring-[#A78BFA] cursor-pointer accent-[#7C3AED] shrink-0"
                 />
                 <label htmlFor="lead-consent" className="text-[12px] text-muted2 leading-relaxed cursor-pointer select-none">
-                  J'accepte d'être contacté(e) par VertexIQ et je confirme avoir lu et accepté les <Link to="/contact" className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Conditions d'Utilisation</Link> et la <Link to="/contact" className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Politique de Confidentialité</Link>.
+                  J'accepte d'être contacté(e) par VertexIQ et je confirme avoir lu et accepté les <Link to="/terms" className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Conditions d'Utilisation</Link> et la <Link to="/privacy" className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Politique de Confidentialité</Link>.
                 </label>
               </div>
 
