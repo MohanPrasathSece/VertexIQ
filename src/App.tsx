@@ -1540,6 +1540,7 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
   const [errorType, setErrorType] = useState<'already_exists' | 'invalid' | 'generic' | null>(null);
   const [loading, setLoading] = useState(false);
   const [signupCountryCode, setSignupCountryCode] = useState('CH');
+  const [signupConsentChecked, setSignupConsentChecked] = useState(false);
   const navigate = useNavigate();
 
   const handleSignupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -1793,13 +1794,27 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }: { mode: 'logi
                   </div>
                 </motion.div>
 
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.33 }} className="flex items-start gap-2.5 pt-1">
+                  <input
+                    id="signup-consent"
+                    type="checkbox"
+                    checked={signupConsentChecked}
+                    onChange={(e) => setSignupConsentChecked(e.target.checked)}
+                    required
+                    className="mt-0.5 h-4 w-4 rounded border-hair text-[#7C3AED] focus:ring-[#A78BFA] cursor-pointer accent-[#7C3AED] shrink-0"
+                  />
+                  <label htmlFor="signup-consent" className="text-[12px] text-muted2 leading-relaxed cursor-pointer select-none">
+                    J'accepte d'être contacté(e) par VertexIQ et je confirme avoir lu et accepté les <Link to="/contact" onClick={onClose} className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Conditions d'Utilisation</Link> et la <Link to="/contact" onClick={onClose} className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Politique de Confidentialité</Link>.
+                  </label>
+                </motion.div>
+
                 <motion.div initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.36 }}>
                   <motion.button
                     type="submit"
-                    disabled={loading}
-                    whileHover={{ scale: 1.02, boxShadow: "0 0 24px rgba(167,139,250,0.5)" }}
-                    whileTap={{ scale: 0.97 }}
-                    className="mt-2 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-3.5 hover:bg-black transition-colors disabled:opacity-70 relative overflow-hidden"
+                    disabled={loading || !signupConsentChecked}
+                    whileHover={!loading && signupConsentChecked ? { scale: 1.02, boxShadow: "0 0 24px rgba(167,139,250,0.5)" } : {}}
+                    whileTap={!loading && signupConsentChecked ? { scale: 0.97 } : {}}
+                    className="mt-2 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-3.5 hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed relative overflow-hidden"
                   >
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
@@ -1951,6 +1966,7 @@ function ContactPage() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [contactMsg, setContactMsg] = useState<{ type: 'already_exists' | 'generic' | null; text: string } | null>(null);
   const [contactCountryCode, setContactCountryCode] = useState('CH');
+  const [consentChecked, setConsentChecked] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -2111,10 +2127,24 @@ function ContactPage() {
                 />
               </div>
 
+              <div className="flex items-start gap-2.5 pt-1">
+                <input
+                  id="contact-page-consent"
+                  type="checkbox"
+                  checked={consentChecked}
+                  onChange={(e) => setConsentChecked(e.target.checked)}
+                  required
+                  className="mt-0.5 h-4 w-4 rounded border-hair text-[#7C3AED] focus:ring-[#A78BFA] cursor-pointer accent-[#7C3AED] shrink-0"
+                />
+                <label htmlFor="contact-page-consent" className="text-[12px] text-muted2 leading-relaxed cursor-pointer select-none">
+                  J'accepte d'être contacté(e) par VertexIQ et je confirme avoir lu et accepté les <Link to="/contact" className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Conditions d'Utilisation</Link> et la <Link to="/contact" className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Politique de Confidentialité</Link>.
+                </label>
+              </div>
+
               <button
                 type="submit"
-                disabled={loading}
-                className="mt-2 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-4 hover:bg-black transition-colors disabled:opacity-60"
+                disabled={loading || !consentChecked}
+                className="mt-2 w-full rounded-xl bg-ink text-white font-semibold text-[15px] py-4 hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loading ? 'Envoi...' : 'Envoyer le Message'}
               </button>
@@ -2377,6 +2407,7 @@ function ContactLeadForm() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [leadMsg, setLeadMsg] = useState<{ type: 'already_exists' | 'generic' | null; text: string } | null>(null);
   const [leadCountryCode, setLeadCountryCode] = useState('CH');
+  const [consentChecked, setConsentChecked] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -2563,12 +2594,26 @@ function ContactLeadForm() {
                 />
               </div>
 
+              <div className="flex items-start gap-2.5 pt-1">
+                <input
+                  id="lead-consent"
+                  type="checkbox"
+                  checked={consentChecked}
+                  onChange={(e) => setConsentChecked(e.target.checked)}
+                  required
+                  className="mt-0.5 h-4 w-4 rounded border-hair text-[#7C3AED] focus:ring-[#A78BFA] cursor-pointer accent-[#7C3AED] shrink-0"
+                />
+                <label htmlFor="lead-consent" className="text-[12px] text-muted2 leading-relaxed cursor-pointer select-none">
+                  J'accepte d'être contacté(e) par VertexIQ et je confirme avoir lu et accepté les <Link to="/contact" className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Conditions d'Utilisation</Link> et la <Link to="/contact" className="text-ink font-medium underline underline-offset-2 hover:text-[#7C3AED] transition-colors">Politique de Confidentialité</Link>.
+                </label>
+              </div>
+
               <motion.button
                 type="submit"
-                disabled={loading}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white py-3.5 rounded-xl font-semibold text-[15px] shadow-lg shadow-[#A78BFA]/20 disabled:opacity-60 transition-all"
+                disabled={loading || !consentChecked}
+                whileHover={!loading && consentChecked ? { scale: 1.02 } : {}}
+                whileTap={!loading && consentChecked ? { scale: 0.97 } : {}}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white py-3.5 rounded-xl font-semibold text-[15px] shadow-lg shadow-[#A78BFA]/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
               >
                 {loading ? (
                   <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
